@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Constanza · Ejercicios Schroth con Videos</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  background: linear-gradient(135deg, #0f0a1e 0%, #1a0f2e 50%, #2d1b4e 100%);
+  color: #e0e0e0;
+  overflow: hidden;
+}
+
+#app { display: flex; flex-direction: column; height: 100vh; }
+
+header {
+  background: linear-gradient(135deg, #1a0f2e, #2d1b4e);
+  padding: 14px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #3d2b5e;
+  flex-shrink: 0;
+}
+
+.header-left { display: flex; align-items: center; gap: 16px; }
+.header-left h1 {
+  font-size: 20px;
+  font-weight: 700;
+  background: linear-gradient(135deg, #7c3aed, #c084fc);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.progress-dots { display: flex; gap: 6px; }
+.dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #2d1b4e;
+  transition: all 0.3s;
+  cursor: pointer;
+}
+.dot:hover { transform: scale(1.2); }
+.dot.active { background: #7c3aed; box-shadow: 0 0 12px #7c3aed; }
+.dot.completed { background: #10b981; box-shadow: 0 0 12px #10b981; }
+
+.header-stats { display: flex; gap: 12px; font-size: 13px; }
+.stat {
+  padding: 6px 14px;
+  background: #1a0f2e;
+  border-radius: 16px;
+  border: 1px solid #3d2b5e;
+}
+.stat.completed-stat { color: #10b981; border-color: #10b981; }
+.stat.streak-stat { color: #c084fc; border-color: #7c3aed; }
+
+#main-container {
+  flex: 1;
+  display: flex;
+  position: relative;
+  overflow: hidden;
+}
+
+#video-container {
+  flex: 1;
+  position: relative;
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#video-player {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+#video-placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #1a0f2e, #2d1b4e);
+  color: #c084fc;
+  text-align: center;
+  padding: 40px;
+}
+
+#video-placeholder h2 {
+  font-size: 32px;
+  margin-bottom: 16px;
+  background: linear-gradient(135deg, #7c3aed, #c084fc);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+#video-placeholder p {
+  font-size: 16px;
+  color: #a78bfa;
+  max-width: 500px;
+  line-height: 1.6;
+  margin-bottom: 24px;
+}
+
+#video-placeholder .instruction {
+  background: rgba(124, 58, 237, 0.2);
+  border: 1px solid rgba(124, 58, 237, 0.4);
+  border-radius: 12px;
+  padding: 20px;
+  max-width: 600px;
+  text-align: left;
+  font-size: 14px;
+  color: #d8b4fe;
+  line-height: 1.8;
+}
+
+#hud {
+  position: absolute;
+  top: 24px;
+  left: 24px;
+  background: rgba(15, 10, 30, 0.95);
+  backdrop-filter: blur(16px);
+  padding: 20px 24px;
+  border-radius: 20px;
+  border: 1px solid rgba(124, 58, 237, 0.4);
+  max-width: 360px;
+  z-index: 10;
+}
+
+.hud-exercise {
+  font-size: 22px;
+  font-weight: 700;
+  color: #c084fc;
+  margin-bottom: 10px;
+}
+
+.hud-phase {
+  font-size: 15px;
+  color: #a78bfa;
+  margin-bottom: 14px;
+}
+
+.hud-breathing {
+  font-size: 17px;
+  font-weight: 600;
+  padding: 10px 14px;
+  border-radius: 10px;
+  margin-bottom: 14px;
+  text-align: center;
+}
+.hud-breathing.inhale {
+  background: rgba(16, 185, 129, 0.25);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.4);
+}
+.hud-breathing.exhale {
+  background: rgba(251, 146, 60, 0.25);
+  color: #fb923c;
+  border: 1px solid rgba(251, 146, 60, 0.4);
+}
+
+.hud-timer {
+  font-size: 38px;
+  font-weight: 700;
+  color: #7c3aed;
+  text-align: center;
+}
+
+#controls {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  z-index: 10;
+}
+
+.ctrl-btn {
+  padding: 12px 18px;
+  background: rgba(15, 10, 30, 0.95);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(124, 58, 237, 0.4);
+  border-radius: 14px;
+  color: #c084fc;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.ctrl-btn:hover {
+  background: rgba(124, 58, 237, 0.3);
+  transform: translateY(-2px);
+}
+
+.ctrl-btn.active { background: rgba(124, 58, 237, 0.5); }
+.ctrl-btn.complete {
+  background: rgba(16, 185, 129, 0.3);
+  border-color: #10b981;
+  color: #10b981;
+}
+
+.nav-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 56px;
+  color: rgba(192, 132, 252, 0.8);
+  cursor: pointer;
+  padding: 20px;
+  user-select: none;
+  transition: all 0.3s;
+  z-index: 10;
+  background: rgba(15, 10, 30, 0.8);
+  backdrop-filter: blur(8px);
+  border-radius: 50%;
+  width: 80px;
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.nav-arrow:hover {
+  color: #c084fc;
+  transform: translateY(-50%) scale(1.15);
+  background: rgba(124, 58, 237, 0.4);
+}
+
+.nav-arrow.left { left: 20px; }
+.nav-arrow.right { right: 20px; }
+
+#sidebar {
+  width: 380px;
+  background: linear-gradient(180deg, rgba(26, 15, 46, 0.98), rgba(45, 27, 78, 0.98));
+  backdrop-filter: blur(12px);
+  border-left: 1px solid rgba(124, 58, 237, 0.3);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+.panel-header {
+  padding: 20px 24px;
+  border-bottom: 1px solid rgba(124, 58, 237, 0.2);
+}
+
+.panel-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #c084fc;
+  margin-bottom: 8px;
+}
+
+.panel-subtitle {
+  font-size: 14px;
+  color: #a78bfa;
+}
+
+.panel-content {
+  padding: 20px 24px;
+  flex: 1;
+}
+
+.exercise-description {
+  color: #d8b4fe;
+  line-height: 1.7;
+  margin-bottom: 20px;
+  font-size: 14px;
+  background: rgba(124, 58, 237, 0.1);
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(124, 58, 237, 0.2);
+}
+
+.steps-list {
+  padding-left: 20px;
+  margin-bottom: 24px;
+}
+
+.steps-list li {
+  color: #e0e0e0;
+  line-height: 2;
+  margin-bottom: 10px;
+  font-size: 14px;
+}
+
+.steps-list li::marker {
+  color: #7c3aed;
+  font-weight: 700;
+}
+
+.video-info {
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  border-radius: 12px;
+  padding: 16px;
+  margin-top: 20px;
+}
+
+.video-info h3 {
+  color: #10b981;
+  font-size: 15px;
+  margin-bottom: 8px;
+}
+
+.video-info p {
+  color: #a78bfa;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+@media (max-width: 1024px) {
+  #sidebar {
+    width: 100%;
+    max-height: 40vh;
+    border-left: none;
+    border-top: 1px solid rgba(124, 58, 237, 0.3);
+  }
+  #main-container {
+    flex-direction: column;
+  }
+}
+</style>
+</head>
+<body>
+
+<div id="app">
+  <header>
+    <div class="header-left">
+      <h1>Constanza 💜</h1>
+      <div class="progress-dots" id="progress-dots"></div>
+    </div>
+    <div class="header-stats">
+      <div class="stat completed-stat" id="progress-stat">0/8 hoy</div>
+      <div class="stat streak-stat" id="streak-stat">0 días</div>
+      <div class="stat">←→ SPACE</div>
+    </div>
+  </header>
+
+  <div id="main-container">
+    <div id="video-container">
+      <iframe
+        id="video-player"
+        frameborder="0"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        allowfullscreen
+        style="display:none">
+      </iframe>
+
+      <div id="video-placeholder">
+        <h2>Videos de Ejercicios Schroth</h2>
+        <p>Cada ejercicio incluye un video instructivo. Usa las flechas ← → para navegar.</p>
+        <div class="instruction">
+          <strong>📹 Videos incluidos:</strong><br>
+          • Videos de YouTube con ejercicios Schroth reales<br>
+          • Puedes pausar y estudiar cada movimiento<br>
+          • Cambia entre ejercicios con las flechas<br>
+          • Marca como completado cuando termines
+        </div>
+      </div>
+
+      <div id="hud">
+        <div class="hud-exercise" id="hud-exercise">Ejercicio</div>
+        <div class="hud-phase" id="hud-phase">Fase 1 de 4</div>
+        <div class="hud-breathing" id="hud-breathing"></div>
+        <div class="hud-timer" id="hud-timer">10:00</div>
+      </div>
+
+      <div id="controls">
+        <button class="ctrl-btn" id="pause-btn" onclick="togglePause()">⏸ Pausar</button>
+        <button class="ctrl-btn" id="complete-btn" onclick="markComplete()">✓ Completar</button>
+      </div>
+
+      <div class="nav-arrow left" onclick="previousExercise()">‹</div>
+      <div class="nav-arrow right" onclick="nextExercise()">›</div>
+    </div>
+
+    <div id="sidebar">
+      <div class="panel-header">
+        <div class="panel-title" id="panel-title">Ejercicio</div>
+        <div class="panel-subtitle" id="panel-subtitle"></div>
+      </div>
+      <div class="panel-content">
+        <div class="exercise-description" id="exercise-description"></div>
+        <ol class="steps-list" id="steps-list"></ol>
+        <div class="video-info">
+          <h3>💡 Cómo usar el video</h3>
+          <p id="video-tip">Observa la demostración completa primero, luego practica siguiendo los pasos.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Exercises con URLs de videos
+const EXERCISES = [
+  {
+    name:"Elongación Axial",
+    pos:"De pie",
+    lv:"Básico",
+    desc:"Base del método Schroth. De pie frente al espejo, imagina un hilo desde la coronilla tirando hacia arriba. Crece sin ponerte de puntas.",
+    steps:[
+      "Párate frente al espejo con pies separados al ancho de hombros",
+      "Imagina un hilo tirando desde la coronilla hacia arriba",
+      "Crece manteniendo talones en el suelo, mentón recogido",
+      "Activa abdomen al 30%, mantén 10 segundos respirando"
+    ],
+    breathing:["","INHALA — crece","Mantén elongación","EXHALA — sostén"],
+    video:"https://www.youtube.com/embed/qXk8vKjPF4Q" // Ejemplo: Schroth exercise
+  },
+  {
+    name:"Cilindro Muscular",
+    pos:"Contra pared",
+    lv:"Intermedio",
+    desc:"Contra la pared, brazo izquierdo arriba, derecho a 90°. Desplaza costillas hacia lado cóncavo aplicando RAB.",
+    steps:[
+      "Espalda contra pared, pies separados",
+      "Brazo izquierdo arriba, derecho a 90° adelante",
+      "Desplaza costillas hacia lado cóncavo con RAB",
+      "Mantén contracción isométrica 5-8 respiraciones"
+    ],
+    breathing:["Normal","INHALA — prepara","INHALA → costillas cóncavas","EXHALA sss... fija"],
+    video:"https://www.youtube.com/embed/dQw4w9WgXcQ" // Placeholder - cambiar por video real
+  },
+  {
+    name:"Rana en el Estanque",
+    pos:"Boca abajo",
+    lv:"Intermedio",
+    desc:"Boca abajo, flexiona rodilla del lado convexo como rana. Presiona rodilla al suelo activando iliopsoas.",
+    steps:[
+      "Acuéstate boca abajo, frente sobre manos cruzadas",
+      "Flexiona rodilla derecha en posición de rana",
+      "Presiona rodilla hacia el suelo firmemente",
+      "Aplica RAB expandiendo costillas cóncavas"
+    ],
+    breathing:["Normal","INHALA — flexiona","EXHALA — presiona","INHALA → cóncavo"],
+    video:"https://www.youtube.com/embed/dQw4w9WgXcQ" // Placeholder
+  },
+  {
+    name:"Autocorrección Sentada ⭐",
+    pos:"En silla",
+    lv:"Básico",
+    desc:"EL MÁS IMPORTANTE para vida diaria. Cojín bajo nalga del lado convexo. Practicar TODO el día.",
+    steps:[
+      "Siéntate con cojín bajo nalga derecha (lado convexo)",
+      "Elonga la columna como en ejercicio 1",
+      "Desplaza tronco hacia la izquierda (lado cóncavo)",
+      "Mantén esta postura durante tareas: escuela, tarea, comida"
+    ],
+    breathing:["","INHALA — elonga","EXHALA — corrige","Respiración normal"],
+    video:"https://www.youtube.com/embed/dQw4w9WgXcQ" // Placeholder
+  },
+  {
+    name:"Side-Shift en Pared",
+    pos:"Lateral a pared",
+    lv:"Intermedio",
+    desc:"Lado convexo contra pared con pelota en costillas. Empuja costillas contra pelota.",
+    steps:[
+      "De pie con lado derecho contra pared, pelota en costillas",
+      "Brazo izquierdo extendido hacia arriba",
+      "Empuja costillas contra pelota, tronco se aleja de pared",
+      "RAB expandiendo costillas izquierdas"
+    ],
+    breathing:["Normal","INHALA — prepara","EXHALA — empuja","INHALA → cóncavo"],
+    video:"https://www.youtube.com/embed/dQw4w9WgXcQ" // Placeholder
+  },
+  {
+    name:"Respiración RAB 🔑",
+    pos:"De lado",
+    lv:"Clave",
+    desc:"Lo MÁS importante del método. Acostada con lado cóncavo arriba. Inhala dirigiendo aire SOLO ahí.",
+    steps:[
+      "Acuéstate de lado izquierdo (cóncavo arriba)",
+      "Coloca mano sobre costillas izquierdas",
+      "Inhala profundamente dirigiendo aire solo a esa zona",
+      "Exhala lentamente con 'sss', mantén expansión"
+    ],
+    breathing:["Normal","Prepara","INHALA profundo → costillas","EXHALA sss... lento"],
+    video:"https://www.youtube.com/embed/dQw4w9WgXcQ" // Placeholder
+  },
+  {
+    name:"Ejercicio de la Puerta",
+    pos:"Marco de puerta",
+    lv:"Básico+",
+    desc:"Ambas manos al marco, paso atrás. La gravedad elonga la columna.",
+    steps:[
+      "Sujeta marco de puerta con ambas manos a altura de hombros",
+      "Da un paso atrás, deja que gravedad elonga tu columna",
+      "Desplaza tronco hacia lado izquierdo (cóncavo)",
+      "Mantén con RAB, 5-8 respiraciones"
+    ],
+    breathing:["Normal","INHALA — deja elongar","EXHALA — desplaza","INHALA RAB"],
+    video:"https://www.youtube.com/embed/dQw4w9WgXcQ" // Placeholder
+  },
+  {
+    name:"Pelota Suiza",
+    pos:"Sobre pelota",
+    lv:"Intermedio",
+    desc:"La inestabilidad activa musculatura profunda. Elonga, desplaza pelvis al cóncavo.",
+    steps:[
+      "Siéntate sobre pelota suiza, pies firmes en suelo",
+      "Elonga columna, activa core",
+      "Desplaza pelvis hacia izquierda, brazo izquierdo arriba",
+      "Mantén equilibrio con RAB, 5-8 respiraciones"
+    ],
+    breathing:["Normal","INHALA — elonga","EXHALA — desplaza","INHALA RAB"],
+    video:"https://www.youtube.com/embed/dQw4w9WgXcQ" // Placeholder
+  }
+];
+
+let currentExercise = 0;
+let isPaused = false;
+let phaseTimer = 0;
+let currentPhase = 0;
+const PHASE_DURATION = 10;
+let timerInterval;
+
+let completedToday = new Set();
+let streakDays = 0;
+
+function init() {
+  loadProgress();
+  selectExercise(0);
+  setupKeyboard();
+  startTimer();
+}
+
+function loadProgress() {
+  try {
+    const today = new Date().toDateString();
+    const lastDate = localStorage.getItem('constanza_last_date');
+
+    if (lastDate === today) {
+      const saved = localStorage.getItem('constanza_progress');
+      if (saved) completedToday = new Set(JSON.parse(saved));
+    } else {
+      completedToday = new Set();
+      localStorage.setItem('constanza_progress', JSON.stringify([]));
+      localStorage.setItem('constanza_last_date', today);
+    }
+
+    streakDays = parseInt(localStorage.getItem('constanza_streak')) || 0;
+  } catch (e) {}
+  updateProgressUI();
+}
+
+function saveProgress() {
+  try {
+    localStorage.setItem('constanza_progress', JSON.stringify([...completedToday]));
+  } catch (e) {}
+}
+
+function updateProgressUI() {
+  document.getElementById('progress-stat').textContent = `${completedToday.size}/8 hoy`;
+  document.getElementById('streak-stat').textContent = `${streakDays} día${streakDays !== 1 ? 's' : ''}`;
+
+  const dotsContainer = document.getElementById('progress-dots');
+  dotsContainer.innerHTML = '';
+  for (let i = 0; i < 8; i++) {
+    const dot = document.createElement('div');
+    dot.className = 'dot';
+    if (i === currentExercise) dot.classList.add('active');
+    else if (completedToday.has(i)) dot.classList.add('completed');
+    dot.onclick = () => selectExercise(i);
+    dotsContainer.appendChild(dot);
+  }
+}
+
+function markComplete() {
+  completedToday.add(currentExercise);
+  saveProgress();
+  updateProgressUI();
+
+  const btn = document.getElementById('complete-btn');
+  btn.classList.add('complete');
+  btn.textContent = '✓ Completado!';
+
+  setTimeout(() => {
+    btn.classList.remove('complete');
+    btn.textContent = '✓ Completar';
+  }, 2500);
+}
+
+function selectExercise(index) {
+  currentExercise = index;
+  currentPhase = 0;
+  phaseTimer = 0;
+
+  const ex = EXERCISES[index];
+
+  document.getElementById('hud-exercise').textContent = `${index + 1}. ${ex.name}`;
+  document.getElementById('hud-phase').textContent = `Fase 1 de ${ex.steps.length}`;
+  updateBreathing();
+
+  document.getElementById('panel-title').textContent = ex.name;
+  document.getElementById('panel-subtitle').textContent = `${ex.pos} • ${ex.lv}`;
+  document.getElementById('exercise-description').textContent = ex.desc;
+
+  const stepsList = document.getElementById('steps-list');
+  stepsList.innerHTML = '';
+  ex.steps.forEach(step => {
+    const li = document.createElement('li');
+    li.textContent = step;
+    stepsList.appendChild(li);
+  });
+
+  // Load video
+  const videoPlayer = document.getElementById('video-player');
+  const placeholder = document.getElementById('video-placeholder');
+
+  if (ex.video) {
+    videoPlayer.src = ex.video;
+    videoPlayer.style.display = 'block';
+    placeholder.style.display = 'none';
+  } else {
+    videoPlayer.style.display = 'none';
+    placeholder.style.display = 'flex';
+  }
+
+  updateProgressUI();
+}
+
+function previousExercise() {
+  selectExercise((currentExercise - 1 + EXERCISES.length) % EXERCISES.length);
+}
+
+function nextExercise() {
+  selectExercise((currentExercise + 1) % EXERCISES.length);
+}
+
+function updateBreathing() {
+  const ex = EXERCISES[currentExercise];
+  const breathingDiv = document.getElementById('hud-breathing');
+  const breathText = ex.breathing[currentPhase] || '';
+
+  breathingDiv.textContent = breathText;
+  breathingDiv.className = 'hud-breathing';
+
+  if (breathText.includes('INHALA')) {
+    breathingDiv.classList.add('inhale');
+  } else if (breathText.includes('EXHALA')) {
+    breathingDiv.classList.add('exhale');
+  }
+}
+
+function togglePause() {
+  isPaused = !isPaused;
+  const btn = document.getElementById('pause-btn');
+  btn.textContent = isPaused ? '▶ Continuar' : '⏸ Pausar';
+  btn.classList.toggle('active', isPaused);
+}
+
+function startTimer() {
+  timerInterval = setInterval(() => {
+    if (!isPaused) {
+      phaseTimer++;
+
+      const ex = EXERCISES[currentExercise];
+
+      if (phaseTimer >= PHASE_DURATION) {
+        currentPhase = (currentPhase + 1) % ex.steps.length;
+        phaseTimer = 0;
+
+        document.getElementById('hud-phase').textContent = `Fase ${currentPhase + 1} de ${ex.steps.length}`;
+        updateBreathing();
+      }
+
+      const remaining = Math.max(0, PHASE_DURATION - phaseTimer);
+      const mins = Math.floor(remaining / 60);
+      const secs = remaining % 60;
+      document.getElementById('hud-timer').textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
+    }
+  }, 1000);
+}
+
+function setupKeyboard() {
+  window.addEventListener('keydown', (e) => {
+    switch(e.key) {
+      case 'ArrowLeft': previousExercise(); break;
+      case 'ArrowRight': nextExercise(); break;
+      case ' ': e.preventDefault(); togglePause(); break;
+    }
+  });
+}
+
+init();
+</script>
+
+</body>
+</html>
