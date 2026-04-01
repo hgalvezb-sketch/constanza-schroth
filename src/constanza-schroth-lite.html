@@ -466,9 +466,9 @@ function buildImprovedModel() {
   neck.position.y = 1.52;
   neck.castShadow = true;
 
-  // TORSO - capsule shape
+  // TORSO - cylinder shape
   const torso = new THREE.Mesh(
-    new THREE.CapsuleGeometry(0.15, 0.35, 12, 16),
+    new THREE.CylinderGeometry(0.15, 0.15, 0.35, 16),
     new THREE.MeshStandardMaterial({ color: topColor, roughness: 0.7 })
   );
   torso.position.y = 1.25;
@@ -493,7 +493,7 @@ function buildImprovedModel() {
 
     // Upper arm
     const upperArm = new THREE.Mesh(
-      new THREE.CapsuleGeometry(0.035, 0.22, 8, 12),
+      new THREE.CylinderGeometry(0.035, 0.035, 0.22, 12),
       new THREE.MeshStandardMaterial({ color: skinColor, roughness: 0.6 })
     );
     upperArm.position.set(x, 1.28, 0);
@@ -509,7 +509,7 @@ function buildImprovedModel() {
 
     // Forearm
     const forearm = new THREE.Mesh(
-      new THREE.CapsuleGeometry(0.03, 0.20, 8, 12),
+      new THREE.CylinderGeometry(0.03, 0.03, 0.20, 12),
       new THREE.MeshStandardMaterial({ color: skinColor, roughness: 0.6 })
     );
     forearm.position.set(x, 1.00, 0);
@@ -551,7 +551,7 @@ function buildImprovedModel() {
 
     // Thigh
     const thigh = new THREE.Mesh(
-      new THREE.CapsuleGeometry(0.06, 0.35, 10, 14),
+      new THREE.CylinderGeometry(0.06, 0.06, 0.35, 14),
       new THREE.MeshStandardMaterial({ color: pantsColor, roughness: 0.6 })
     );
     thigh.position.set(x, 0.73, 0);
@@ -567,7 +567,7 @@ function buildImprovedModel() {
 
     // Shin
     const shin = new THREE.Mesh(
-      new THREE.CapsuleGeometry(0.045, 0.35, 10, 14),
+      new THREE.CylinderGeometry(0.045, 0.045, 0.35, 14),
       new THREE.MeshStandardMaterial({ color: skinColor, roughness: 0.6 })
     );
     shin.position.set(x, 0.30, 0);
