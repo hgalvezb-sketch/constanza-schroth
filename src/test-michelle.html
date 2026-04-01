@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Test Michelle.glb</title>
+<style>
+body {
+  margin: 0;
+  background: #0f0a1e;
+  color: #fff;
+  font-family: monospace;
+}
+#log {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  background: rgba(0,0,0,0.8);
+  padding: 20px;
+  border-radius: 8px;
+  max-width: 400px;
+  z-index: 100;
+}
+canvas { display: block; }
+</style>
+</head>
+<body>
+<div id="log">
+  <h3>🔍 Diagnóstico Michelle.glb</h3>
+  <div id="status">Iniciando...</div>
+  <div id="progress"></div>
+  <div id="errors" style="color: #ff5555;"></div>
+</div>
+<canvas id="canvas"></canvas>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.158.0/examples/js/loaders/GLTFLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.158.0/examples/js/controls/OrbitControls.js"></script>
+
+<script>
+const log = (msg) => {
+  console.log(msg);
+  document.getElementById('status').innerHTML += '<br>' + msg;
+};
+
+const error = (msg) => {
+  console.error(msg);
+  document.getElementById('errors').innerHTML += '<br>' + msg;
+};
+
+log('✓ Three.js cargado');
+
+// Scene setup
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x1a0f2e);
+
+const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 100);
+camera.position.set(0, 1.6, 3);
+
+const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('canvas'), antialias: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+const controls = new THREE.OrbitControls(camera, renderer.domElement);
+controls.target.set(0, 1.2, 0);
+controls.update();
+
+// Lights
+scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+dirLight.position.set(4, 6, 3);
+scene.add(dirLight);
+
+// Floor
+const floor = new THREE.Mesh(
+  new THREE.PlaneGeometry(10, 10),
+  new THREE.MeshStandardMaterial({ color: 0x9b7653 })
+);
+floor.rotation.x = -Math.PI / 2;
+scene.add(floor);
+
+log('✓ Escena configurada');
+
+// Load model
+log('⏳ Cargando Michelle.glb...');
+
+const loader = new THREE.GLTFLoader();
+
+loader.load(
+  'models/Michelle.glb',
+
+  // Success
+  (gltf) => {
+    log('✅ Michelle.glb cargado exitosamente!');
+    log(`- Animaciones: ${gltf.animations.length}`);
+    log(`- Escena: ${gltf.scene.children.length} objetos`);
+
+    const model = gltf.scene;
+    model.scale.set(1, 1, 1);
+    model.position.set(0, 0, 0);
+
+    let meshCount = 0;
+    model.traverse((child) => {
+      if (child.isMesh) {
+        meshCount++;
+        child.castShadow = true;
+        log(`- Mesh: ${child.name || 'unnamed'}`);
+      }
+    });
+
+    log(`✓ Total meshes: ${meshCount}`);
+
+    scene.add(model);
+
+    document.getElementById('status').innerHTML += '<br><br><strong style="color:#10b981">✅ TODO FUNCIONANDO!</strong>';
+  },
+
+  // Progress
+  (progress) => {
+    const percent = (progress.loaded / progress.total * 100).toFixed(0);
+    document.getElementById('progress').textContent = `Progreso: ${percent}% (${(progress.loaded/1024/1024).toFixed(2)}MB / ${(progress.total/1024/1024).toFixed(2)}MB)`;
+  },
+
+  // Error
+  (err) => {
+    error('❌ Error cargando Michelle.glb');
+    error(err.message || err);
+    error('Verifica: ');
+    error('1. Archivo existe en: models/Michelle.glb');
+    error('2. Estás usando servidor HTTP (no file://)');
+    error('3. Consola del navegador (F12)');
+  }
+);
+
+// Animation loop
+function animate() {
+  requestAnimationFrame(animate);
+  controls.update();
+  renderer.render(scene, camera);
+}
+animate();
+
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+</script>
+</body>
+</html>

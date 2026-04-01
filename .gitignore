@@ -1,0 +1,19 @@
+# Archivos sensibles - NO subir
+*.pdf
+*acta_nacimiento*
+*radiografia*
+*rayos*
+
+# Archivos temporales
+*.tmp
+*.log
+*.bak
+~$*
+
+# Carpetas del sistema
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Node modules (si se usan)
+node_modules/

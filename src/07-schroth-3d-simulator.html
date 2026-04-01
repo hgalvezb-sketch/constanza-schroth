@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Simulador 3D - Ejercicios Schroth</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#1a1a2e;color:#e0e0e0;overflow-x:hidden}
+#app{display:flex;flex-direction:column;height:100vh}
+header{background:linear-gradient(135deg,#16213e,#0f3460);padding:12px 20px;text-align:center;border-bottom:1px solid #1a3a6a}
+header h1{font-size:18px;font-weight:600;color:#e0e0e0}
+header p{font-size:12px;color:#8899aa;margin-top:2px}
+#main{display:flex;flex:1;min-height:0}
+#sidebar{width:260px;background:#16213e;border-right:1px solid #1a3a6a;overflow-y:auto;flex-shrink:0}
+#canvas-wrap{flex:1;position:relative;background:#1a1a2e}
+canvas{display:block;width:100%;height:100%}
+.ex-item{padding:12px 16px;cursor:pointer;border-bottom:1px solid #1a3a6a;transition:background 0.2s}
+.ex-item:hover{background:#1a3a6a}
+.ex-item.active{background:#0f3460;border-left:3px solid #4fc3f7}
+.ex-item .ex-num{display:inline-block;width:24px;height:24px;border-radius:50%;background:#0f3460;color:#4fc3f7;text-align:center;line-height:24px;font-size:12px;font-weight:600;margin-right:8px}
+.ex-item.active .ex-num{background:#4fc3f7;color:#16213e}
+.ex-item .ex-name{font-size:13px;font-weight:500}
+.ex-item .ex-pos{font-size:11px;color:#8899aa;margin-top:2px}
+#info-panel{position:absolute;bottom:0;left:0;right:0;background:rgba(22,33,62,0.92);backdrop-filter:blur(8px);padding:14px 20px;border-top:1px solid #1a3a6a;max-height:180px;overflow-y:auto}
+#info-panel h3{font-size:14px;color:#4fc3f7;margin-bottom:6px}
+#info-panel p{font-size:12px;line-height:1.6;color:#b0bec5}
+#controls{position:absolute;top:12px;right:12px;display:flex;gap:8px;flex-direction:column}
+.ctrl-btn{padding:8px 14px;background:rgba(22,33,62,0.85);border:1px solid #1a3a6a;border-radius:8px;color:#4fc3f7;font-size:12px;cursor:pointer;transition:all 0.2s;backdrop-filter:blur(4px)}
+.ctrl-btn:hover{background:#0f3460;border-color:#4fc3f7}
+.ctrl-btn.active{background:#4fc3f7;color:#16213e}
+#speed-ctrl{position:absolute;top:12px;left:12px;display:flex;align-items:center;gap:8px;background:rgba(22,33,62,0.85);padding:8px 14px;border-radius:8px;border:1px solid #1a3a6a;backdrop-filter:blur(4px)}
+#speed-ctrl label{font-size:11px;color:#8899aa}
+#speed-ctrl input{width:80px}
+#speed-val{font-size:12px;color:#4fc3f7;min-width:30px}
+#phase-indicator{position:absolute;top:60px;left:12px;background:rgba(22,33,62,0.85);padding:8px 14px;border-radius:8px;border:1px solid #1a3a6a;font-size:12px;backdrop-filter:blur(4px)}
+#phase-name{color:#4fc3f7;font-weight:500}
+#breathe-indicator{margin-top:4px;font-size:11px}
+.inhale{color:#81c784}
+.exhale{color:#ffb74d}
+@media(max-width:768px){
+  #main{flex-direction:column}
+  #sidebar{width:100%;height:auto;max-height:140px;display:flex;overflow-x:auto;overflow-y:hidden;flex-shrink:0}
+  .ex-item{min-width:140px;border-bottom:none;border-right:1px solid #1a3a6a}
+}
+</style>
+</head>
+<body>
+<div id="app">
+<header>
+<h1>Simulador 3D — Ejercicios Schroth para Escoliosis</h1>
+<p>Arrastra para rotar la vista • Scroll para zoom • Haz clic en un ejercicio para verlo</p>
+</header>
+<div id="main">
+<div id="sidebar" id="ex-list"></div>
+<div id="canvas-wrap">
+<canvas id="c"></canvas>
+<div id="speed-ctrl">
+<label>Velocidad:</label>
+<input type="range" min="1" max="20" value="8" id="speed-range" oninput="setSpeed(this.value)">
+<span id="speed-val">1.0x</span>
+</div>
+<div id="phase-indicator">
+<div id="phase-name">Posición inicial</div>
+<div id="breathe-indicator"></div>
+</div>
+<div id="controls">
+<button class="ctrl-btn" onclick="togglePause()" id="pause-btn">⏸ Pausar</button>
+<button class="ctrl-btn" onclick="resetView()">🔄 Reset vista</button>
+<button class="ctrl-btn" onclick="toggleGrid()" id="grid-btn">▦ Piso</button>
+</div>
+<div id="info-panel">
+<h3 id="info-title">Selecciona un ejercicio</h3>
+<p id="info-desc">Haz clic en cualquier ejercicio del panel izquierdo para ver la simulación 3D animada con instrucciones paso a paso.</p>
+</div>
+</div>
+</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+const exercises = [
+  {
+    name: "Elongación axial de pie",
+    pos: "De pie",
+    level: "Básico",
+    desc: "Ejercicio base del método Schroth. De pie, imagina que un hilo te jala desde la coronilla. Crece hacia arriba activando suavemente el abdomen. Mentón ligeramente recogido. Este movimiento crea espacio entre las vértebras y es la base de toda la autocorrección.",
+    phases: ["Posición inicial relajada", "Elongación axial — crece hacia arriba", "Mentón recogido + abdomen activo", "Mantener 10 seg + respirar"],
+    breathe: ["", "INHALA — crece", "Mantén", "EXHALA — sostén posición"]
+  },
+  {
+    name: "Cilindro muscular",
+    pos: "De pie contra pared",
+    level: "Intermedio",
+    desc: "Ejercicio central del método. Contra la pared, brazo del lado cóncavo extendido arriba, el otro a 90°. Desplaza costillas hacia el lado cóncavo mientras aplicas respiración RAB. Crea un 'cilindro' muscular estabilizador alrededor de la columna.",
+    phases: ["Espalda contra pared", "Brazo izq arriba, der a 90°", "Desplaza costillas + RAB", "Contracción isométrica — mantener"],
+    breathe: ["Respira normal", "INHALA preparando", "INHALA hacia lado cóncavo", "EXHALA — fija posición"]
+  },
+  {
+    name: "Rana en el estanque",
+    pos: "Boca abajo (prono)",
+    level: "Intermedio",
+    desc: "Acostada boca abajo, flexiona la rodilla del lado convexo llevándola hacia afuera como rana. Presiona rodilla contra el suelo para activar el iliopsoas y desrotar la pelvis. Este músculo es el único que conecta la columna lumbar con el fémur.",
+    phases: ["Acostada boca abajo", "Flexiona rodilla — posición rana", "Presiona rodilla contra suelo", "RAB + mantener presión"],
+    breathe: ["Respira normal", "INHALA preparando", "EXHALA — presiona", "INHALA costillas cóncavas"]
+  },
+  {
+    name: "Autocorrección sentada",
+    pos: "Sentada en silla",
+    level: "Básico",
+    desc: "El ejercicio MÁS importante para la vida diaria. Sentada con cojín bajo nalga del lado convexo, elonga y desplaza tronco al lado cóncavo. Debe practicarse TODO el día en la escuela. Incluye adaptación para escritura zurda: papel inclinado 30-45°.",
+    phases: ["Sentada relajada (incorrecta)", "Cojín bajo nalga + elongación", "Desplazamiento lateral correctivo", "Postura corregida mantenida"],
+    breathe: ["", "INHALA — elonga", "EXHALA — desplaza", "Respiración normal mantenida"]
+  },
+  {
+    name: "Lateral en pared (side-shift)",
+    pos: "De pie lateral a pared",
+    level: "Intermedio",
+    desc: "Lado convexo contra la pared con pelota entre costillas y pared. Brazo superior extendido arriba. Empuja costillas contra pelota mientras desplazas tronco lejos de pared. Inhala expandiendo costillas del lado cóncavo.",
+    phases: ["De pie lateral a pared", "Pelota en costillas + brazo arriba", "Empuja contra pared + shift", "RAB + mantener corrección"],
+    breathe: ["Respira normal", "INHALA preparando", "EXHALA — empuja", "INHALA lado cóncavo"]
+  },
+  {
+    name: "Respiración RAB",
+    pos: "Acostada de lado",
+    level: "Clave",
+    desc: "Respiración Angular Rotatoria — el componente MÁS importante del método Schroth. Acostada con lado cóncavo arriba, mano sobre costillas. Inhala dirigiendo aire SOLO hacia esas costillas, como inflando un globo interno. Esto desrota las vértebras desde adentro.",
+    phases: ["Acostada de lado, cóncavo arriba", "Manos en costillas cóncavas", "INHALA — expande solo ese lado", "EXHALA lento — mantén expansión"],
+    breathe: ["Respira normal", "Prepara", "INHALA profundo → costillas", "EXHALA sss... lento"]
+  },
+  {
+    name: "Ejercicio de la puerta",
+    pos: "De pie en marco de puerta",
+    level: "Básico-Inter.",
+    desc: "Sujeta el marco de una puerta con ambas manos a altura de hombros. Da un paso atrás dejando que la gravedad elongue la columna. Luego desplaza trunks al lado cóncavo manteniendo manos fijas. Combina elongación gravitacional con corrección lateral.",
+    phases: ["Manos al marco, paso atrás", "Gravedad elonga la columna", "Desplazamiento lateral correctivo", "RAB + mantener elongación"],
+    breathe: ["Respira normal", "INHALA — deja elongar", "EXHALA — desplaza", "INHALA RAB cóncavo"]
+  },
+  {
+    name: "Corrección en pelota suiza",
+    pos: "Sentada sobre pelota",
+    level: "Intermedio",
+    desc: "Sentada sobre pelota suiza, la inestabilidad activa la musculatura profunda. Elonga columna, desplaza pelvis al lado cóncavo. Avanzado: extiende brazo del lado cóncavo arriba. Combina estabilización con autocorrección tridimensional.",
+    phases: ["Sentada sobre pelota, estable", "Elongación + activar core", "Desplazar pelvis + brazo arriba", "RAB + mantener equilibrio"],
+    breathe: ["Respira normal", "INHALA — elonga", "EXHALA — desplaza", "INHALA RAB cóncavo"]
+  }
+];
+
+let scene, camera, renderer, body = {}, clock, mixer;
+let currentEx = 0, paused = false, speedMul = 1.0, showGrid = true;
+let animTime = 0, phaseIdx = 0;
+const PHASE_DUR = 2.5;
+
+function init() {
+  const canvas = document.getElementById('c');
+  const wrap = document.getElementById('canvas-wrap');
+  
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x1a1a2e);
+  scene.fog = new THREE.Fog(0x1a1a2e, 15, 30);
+
+  camera = new THREE.PerspectiveCamera(50, wrap.clientWidth / wrap.clientHeight, 0.1, 100);
+  camera.position.set(4, 3, 5);
+  camera.lookAt(0, 1.2, 0);
+
+  renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+  renderer.setSize(wrap.clientWidth, wrap.clientHeight);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+  const ambLight = new THREE.AmbientLight(0x4466aa, 0.6);
+  scene.add(ambLight);
+  const dirLight = new THREE.DirectionalLight(0xffffff, 0.9);
+  dirLight.position.set(5, 8, 5);
+  dirLight.castShadow = true;
+  dirLight.shadow.mapSize.set(1024, 1024);
+  scene.add(dirLight);
+  const fillLight = new THREE.DirectionalLight(0x4fc3f7, 0.3);
+  fillLight.position.set(-3, 4, -2);
+  scene.add(fillLight);
+
+  createFloor();
+  createHumanoid();
+  buildSidebar();
+  selectExercise(0);
+
+  let isDrag = false, prevX = 0, prevY = 0;
+  let camTheta = Math.PI / 4, camPhi = Math.PI / 6, camDist = 6.5;
+
+  canvas.addEventListener('pointerdown', e => { isDrag = true; prevX = e.clientX; prevY = e.clientY; });
+  window.addEventListener('pointerup', () => isDrag = false);
+  window.addEventListener('pointermove', e => {
+    if (!isDrag) return;
+    camTheta -= (e.clientX - prevX) * 0.008;
+    camPhi = Math.max(-0.3, Math.min(1.2, camPhi + (e.clientY - prevY) * 0.008));
+    prevX = e.clientX; prevY = e.clientY;
+    updateCam();
+  });
+  canvas.addEventListener('wheel', e => {
+    camDist = Math.max(3, Math.min(12, camDist + e.deltaY * 0.005));
+    updateCam();
+    e.preventDefault();
+  }, { passive: false });
+
+  function updateCam() {
+    camera.position.x = camDist * Math.sin(camTheta) * Math.cos(camPhi);
+    camera.position.y = camDist * Math.sin(camPhi) + 1.2;
+    camera.position.z = camDist * Math.cos(camTheta) * Math.cos(camPhi);
+    camera.lookAt(0, 1.2, 0);
+  }
+  updateCam();
+
+  window.addEventListener('resize', () => {
+    camera.aspect = wrap.clientWidth / wrap.clientHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(wrap.clientWidth, wrap.clientHeight);
+  });
+
+  clock = new THREE.Clock();
+  animate();
+}
+
+function createFloor() {
+  const gridHelper = new THREE.GridHelper(10, 20, 0x1a3a6a, 0x16213e);
+  gridHelper.name = 'grid';
+  scene.add(gridHelper);
+  const floorGeo = new THREE.PlaneGeometry(10, 10);
+  const floorMat = new THREE.MeshStandardMaterial({ color: 0x16213e, roughness: 0.9 });
+  const floor = new THREE.Mesh(floorGeo, floorMat);
+  floor.rotation.x = -Math.PI / 2;
+  floor.receiveShadow = true;
+  floor.name = 'floor';
+  scene.add(floor);
+}
+
+const SKIN = 0xe8b89d, CLOTH = 0x2a6496, CLOTH2 = 0x1a4060, JOINT = 0xd4956a, HAIR = 0x3a2a1a;
+
+function createLimb(w, h, color) {
+  const geo = new THREE.CylinderGeometry(w, w * 0.9, h, 8);
+  const mat = new THREE.MeshStandardMaterial({ color, roughness: 0.7 });
+  const m = new THREE.Mesh(geo, mat);
+  m.castShadow = true;
+  return m;
+}
+function createJoint(r, color) {
+  const geo = new THREE.SphereGeometry(r, 12, 12);
+  const mat = new THREE.MeshStandardMaterial({ color: color || JOINT, roughness: 0.6 });
+  const m = new THREE.Mesh(geo, mat);
+  m.castShadow = true;
+  return m;
+}
+
+function createHumanoid() {
+  const root = new THREE.Group();
+  root.name = 'humanoid';
+
+  const pelvis = new THREE.Group(); pelvis.position.y = 1.0;
+  const pelvisM = createLimb(0.15, 0.15, CLOTH2); pelvis.add(pelvisM);
+
+  const spine = new THREE.Group(); spine.position.y = 0.08;
+  const spineM = createLimb(0.13, 0.35, CLOTH); spine.add(spineM); spineM.position.y = 0.18;
+
+  const chest = new THREE.Group(); chest.position.y = 0.38;
+  const chestM = createLimb(0.16, 0.3, CLOTH); chest.add(chestM); chestM.position.y = 0.15;
+
+  const neck = new THREE.Group(); neck.position.y = 0.32;
+  const neckM = createLimb(0.06, 0.12, SKIN); neck.add(neckM); neckM.position.y = 0.06;
+
+  const head = new THREE.Group(); head.position.y = 0.14;
+  const headM = createJoint(0.12, SKIN); head.add(headM); headM.position.y = 0.06;
+  const hairM = new THREE.Mesh(new THREE.SphereGeometry(0.13, 12, 12, 0, Math.PI * 2, 0, Math.PI * 0.6),
+    new THREE.MeshStandardMaterial({ color: HAIR, roughness: 0.9 }));
+  hairM.position.y = 0.09; head.add(hairM);
+
+  const lShoulder = new THREE.Group(); lShoulder.position.set(-0.22, 0.26, 0);
+  const lShoulderJ = createJoint(0.055); lShoulder.add(lShoulderJ);
+  const lUpperArm = new THREE.Group();
+  const lUpperArmM = createLimb(0.04, 0.28, SKIN); lUpperArm.add(lUpperArmM); lUpperArmM.position.y = -0.14;
+  lShoulder.add(lUpperArm);
+  const lElbow = new THREE.Group(); lElbow.position.y = -0.3;
+  const lElbowJ = createJoint(0.04); lElbow.add(lElbowJ);
+  const lForearm = new THREE.Group();
+  const lForearmM = createLimb(0.035, 0.25, SKIN); lForearm.add(lForearmM); lForearmM.position.y = -0.12;
+  lElbow.add(lForearm);
+  lUpperArm.add(lElbow);
+
+  const rShoulder = new THREE.Group(); rShoulder.position.set(0.22, 0.26, 0);
+  const rShoulderJ = createJoint(0.055); rShoulder.add(rShoulderJ);
+  const rUpperArm = new THREE.Group();
+  const rUpperArmM = createLimb(0.04, 0.28, SKIN); rUpperArm.add(rUpperArmM); rUpperArmM.position.y = -0.14;
+  rShoulder.add(rUpperArm);
+  const rElbow = new THREE.Group(); rElbow.position.y = -0.3;
+  const rElbowJ = createJoint(0.04); rElbow.add(rElbowJ);
+  const rForearm = new THREE.Group();
+  const rForearmM = createLimb(0.035, 0.25, SKIN); rForearm.add(rForearmM); rForearmM.position.y = -0.12;
+  rElbow.add(rForearm);
+  rUpperArm.add(rElbow);
+
+  const lHip = new THREE.Group(); lHip.position.set(-0.1, -0.08, 0);
+  const lHipJ = createJoint(0.06); lHip.add(lHipJ);
+  const lThigh = new THREE.Group();
+  const lThighM = createLimb(0.06, 0.4, CLOTH2); lThigh.add(lThighM); lThighM.position.y = -0.2;
+  lHip.add(lThigh);
+  const lKnee = new THREE.Group(); lKnee.position.y = -0.42;
+  const lKneeJ = createJoint(0.05); lKnee.add(lKneeJ);
+  const lShin = new THREE.Group();
+  const lShinM = createLimb(0.045, 0.38, SKIN); lShin.add(lShinM); lShinM.position.y = -0.19;
+  lKnee.add(lShin);
+  const lFoot = new THREE.Group(); lFoot.position.y = -0.4;
+  const lFootM = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.05, 0.18),
+    new THREE.MeshStandardMaterial({ color: 0x444444, roughness: 0.8 }));
+  lFootM.position.set(0, -0.02, 0.04); lFoot.add(lFootM); lFootM.castShadow = true;
+  lShin.add(lFoot);
+  lThigh.add(lKnee);
+
+  const rHip = new THREE.Group(); rHip.position.set(0.1, -0.08, 0);
+  const rHipJ = createJoint(0.06); rHip.add(rHipJ);
+  const rThigh = new THREE.Group();
+  const rThighM = createLimb(0.06, 0.4, CLOTH2); rThigh.add(rThighM); rThighM.position.y = -0.2;
+  rHip.add(rThigh);
+  const rKnee = new THREE.Group(); rKnee.position.y = -0.42;
+  const rKneeJ = createJoint(0.05); rKnee.add(rKneeJ);
+  const rShin = new THREE.Group();
+  const rShinM = createLimb(0.045, 0.38, SKIN); rShin.add(rShinM); rShinM.position.y = -0.19;
+  rKnee.add(rShin);
+  const rFoot = new THREE.Group(); rFoot.position.y = -0.4;
+  const rFootM = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.05, 0.18),
+    new THREE.MeshStandardMaterial({ color: 0x444444, roughness: 0.8 }));
+  rFootM.position.set(0, -0.02, 0.04); rFoot.add(rFootM); rFootM.castShadow = true;
+  rShin.add(rFoot);
+  rThigh.add(rKnee);
+
+  chest.add(lShoulder); chest.add(rShoulder); chest.add(neck); neck.add(head);
+  spine.add(chest);
+  pelvis.add(spine); pelvis.add(lHip); pelvis.add(rHip);
+  root.add(pelvis);
+  scene.add(root);
+
+  body = { root, pelvis, spine, chest, neck, head,
+    lShoulder, lUpperArm, lElbow, lForearm,
+    rShoulder, rUpperArm, rElbow, rForearm,
+    lHip, lThigh, lKnee, lShin, lFoot,
+    rHip, rThigh, rKnee, rShin, rFoot };
+}
+
+function resetPose() {
+  body.pelvis.position.y = 1.0; body.pelvis.rotation.set(0,0,0);
+  body.spine.rotation.set(0,0,0);
+  body.chest.rotation.set(0,0,0);
+  body.neck.rotation.set(0,0,0);
+  body.head.rotation.set(0,0,0);
+  body.lUpperArm.rotation.set(0,0,0.15);
+  body.rUpperArm.rotation.set(0,0,-0.15);
+  body.lForearm.rotation.set(0,0,0);
+  body.rForearm.rotation.set(0,0,0);
+  body.lThigh.rotation.set(0,0,0);
+  body.rThigh.rotation.set(0,0,0);
+  body.lShin.rotation.set(0,0,0);
+  body.rShin.rotation.set(0,0,0);
+  body.root.rotation.set(0,0,0);
+  body.root.position.set(0,0,0);
+}
+
+const poses = {
+  0: [ // Elongación axial
+    () => { resetPose(); body.spine.rotation.z=0.03; body.chest.rotation.z=-0.02; body.pelvis.position.y=0.97; },
+    () => { resetPose(); body.pelvis.position.y=1.05; body.spine.rotation.x=-0.05; body.lUpperArm.rotation.z=0.3; body.rUpperArm.rotation.z=-0.3; },
+    () => { resetPose(); body.pelvis.position.y=1.08; body.neck.rotation.x=0.1; body.spine.rotation.x=-0.06; },
+    () => { resetPose(); body.pelvis.position.y=1.08; body.neck.rotation.x=0.1; body.spine.rotation.x=-0.06; body.chest.rotation.x=-0.03; }
+  ],
+  1: [ // Cilindro muscular
+    () => { resetPose(); body.lUpperArm.rotation.z=0.2; body.rUpperArm.rotation.z=-0.2; },
+    () => { resetPose(); body.lUpperArm.rotation.set(0,0,-Math.PI+0.3); body.lForearm.rotation.z=0; body.rUpperArm.rotation.set(-0.3,0,-Math.PI/2); body.rForearm.rotation.set(-Math.PI/2,0,0); },
+    () => { resetPose(); body.lUpperArm.rotation.set(0,0,-Math.PI+0.3); body.rUpperArm.rotation.set(-0.3,0,-Math.PI/2); body.rForearm.rotation.set(-Math.PI/2,0,0); body.chest.rotation.z=0.08; body.spine.rotation.z=0.05; },
+    () => { resetPose(); body.lUpperArm.rotation.set(0,0,-Math.PI+0.3); body.rUpperArm.rotation.set(-0.3,0,-Math.PI/2); body.rForearm.rotation.set(-Math.PI/2,0,0); body.chest.rotation.z=0.08; body.spine.rotation.z=0.05; body.pelvis.position.y=1.06; }
+  ],
+  2: [ // Rana
+    () => { resetPose(); body.root.rotation.x=Math.PI/2; body.root.position.y=0.2; body.pelvis.position.y=0; body.lUpperArm.rotation.set(Math.PI/2,0,0.5); body.rUpperArm.rotation.set(Math.PI/2,0,-0.5); body.lForearm.rotation.set(0.3,0,0); body.rForearm.rotation.set(0.3,0,0); },
+    () => { resetPose(); body.root.rotation.x=Math.PI/2; body.root.position.y=0.2; body.pelvis.position.y=0; body.lUpperArm.rotation.set(Math.PI/2,0,0.5); body.rUpperArm.rotation.set(Math.PI/2,0,-0.5); body.lForearm.rotation.set(0.3,0,0); body.rForearm.rotation.set(0.3,0,0); body.rThigh.rotation.set(0,0,-Math.PI/3); body.rKnee.children[1].rotation.x=Math.PI/2; },
+    () => { resetPose(); body.root.rotation.x=Math.PI/2; body.root.position.y=0.2; body.pelvis.position.y=0; body.lUpperArm.rotation.set(Math.PI/2,0,0.5); body.rUpperArm.rotation.set(Math.PI/2,0,-0.5); body.lForearm.rotation.set(0.3,0,0); body.rForearm.rotation.set(0.3,0,0); body.rThigh.rotation.set(0,0.3,-Math.PI/3); body.rShin.rotation.x=Math.PI/2.5; },
+    () => { resetPose(); body.root.rotation.x=Math.PI/2; body.root.position.y=0.2; body.pelvis.position.y=0; body.lUpperArm.rotation.set(Math.PI/2,0,0.5); body.rUpperArm.rotation.set(Math.PI/2,0,-0.5); body.lForearm.rotation.set(0.3,0,0); body.rForearm.rotation.set(0.3,0,0); body.rThigh.rotation.set(0,0.3,-Math.PI/3); body.rShin.rotation.x=Math.PI/2.5; body.pelvis.rotation.y=0.08; }
+  ],
+  3: [ // Sentada
+    () => { resetPose(); body.pelvis.position.y=0.6; body.lThigh.rotation.x=-Math.PI/2; body.rThigh.rotation.x=-Math.PI/2; body.lShin.rotation.x=Math.PI/2; body.rShin.rotation.x=Math.PI/2; body.spine.rotation.z=0.06; body.chest.rotation.z=0.04; body.chest.rotation.x=0.15; },
+    () => { resetPose(); body.pelvis.position.y=0.63; body.lThigh.rotation.x=-Math.PI/2; body.rThigh.rotation.x=-Math.PI/2; body.lShin.rotation.x=Math.PI/2; body.rShin.rotation.x=Math.PI/2; body.spine.rotation.x=-0.05; },
+    () => { resetPose(); body.pelvis.position.y=0.65; body.lThigh.rotation.x=-Math.PI/2; body.rThigh.rotation.x=-Math.PI/2; body.lShin.rotation.x=Math.PI/2; body.rShin.rotation.x=Math.PI/2; body.spine.rotation.x=-0.05; body.chest.rotation.z=-0.06; },
+    () => { resetPose(); body.pelvis.position.y=0.65; body.lThigh.rotation.x=-Math.PI/2; body.rThigh.rotation.x=-Math.PI/2; body.lShin.rotation.x=Math.PI/2; body.rShin.rotation.x=Math.PI/2; body.spine.rotation.x=-0.05; body.chest.rotation.z=-0.06; body.neck.rotation.x=0.08; }
+  ],
+  4: [ // Lateral pared
+    () => { resetPose(); body.root.rotation.y=Math.PI/2; },
+    () => { resetPose(); body.root.rotation.y=Math.PI/2; body.lUpperArm.rotation.set(0,0,-Math.PI+0.2); body.pelvis.position.y=1.02; },
+    () => { resetPose(); body.root.rotation.y=Math.PI/2; body.lUpperArm.rotation.set(0,0,-Math.PI+0.2); body.chest.rotation.z=0.12; body.spine.rotation.z=0.06; body.pelvis.position.y=1.02; },
+    () => { resetPose(); body.root.rotation.y=Math.PI/2; body.lUpperArm.rotation.set(0,0,-Math.PI+0.2); body.chest.rotation.z=0.12; body.spine.rotation.z=0.06; body.pelvis.position.y=1.05; }
+  ],
+  5: [ // RAB
+    () => { resetPose(); body.root.rotation.z=Math.PI/2; body.root.position.set(0,0.3,0); body.pelvis.position.y=0; body.lThigh.rotation.x=-0.15; body.rThigh.rotation.x=-0.15; body.lShin.rotation.x=0.3; body.rShin.rotation.x=0.3; },
+    () => { resetPose(); body.root.rotation.z=Math.PI/2; body.root.position.set(0,0.3,0); body.pelvis.position.y=0; body.lThigh.rotation.x=-0.15; body.rThigh.rotation.x=-0.15; body.lShin.rotation.x=0.3; body.rShin.rotation.x=0.3; body.rUpperArm.rotation.set(0,0,Math.PI/3); body.rForearm.rotation.set(-0.5,0,0); },
+    () => { resetPose(); body.root.rotation.z=Math.PI/2; body.root.position.set(0,0.35,0); body.pelvis.position.y=0; body.lThigh.rotation.x=-0.15; body.rThigh.rotation.x=-0.15; body.lShin.rotation.x=0.3; body.rShin.rotation.x=0.3; body.rUpperArm.rotation.set(0,0,Math.PI/3); body.rForearm.rotation.set(-0.5,0,0); body.chest.rotation.set(0,0,0.06); },
+    () => { resetPose(); body.root.rotation.z=Math.PI/2; body.root.position.set(0,0.3,0); body.pelvis.position.y=0; body.lThigh.rotation.x=-0.15; body.rThigh.rotation.x=-0.15; body.lShin.rotation.x=0.3; body.rShin.rotation.x=0.3; body.rUpperArm.rotation.set(0,0,Math.PI/3); body.rForearm.rotation.set(-0.5,0,0); }
+  ],
+  6: [ // Puerta
+    () => { resetPose(); body.lUpperArm.rotation.set(-Math.PI/2-0.3,0,0.3); body.rUpperArm.rotation.set(-Math.PI/2-0.3,0,-0.3); body.lForearm.rotation.set(0.6,0,0); body.rForearm.rotation.set(0.6,0,0); body.spine.rotation.x=0.15; body.pelvis.position.y=0.98; },
+    () => { resetPose(); body.lUpperArm.rotation.set(-Math.PI/2-0.3,0,0.3); body.rUpperArm.rotation.set(-Math.PI/2-0.3,0,-0.3); body.lForearm.rotation.set(0.6,0,0); body.rForearm.rotation.set(0.6,0,0); body.spine.rotation.x=0.2; body.chest.rotation.x=0.1; body.pelvis.position.y=0.95; },
+    () => { resetPose(); body.lUpperArm.rotation.set(-Math.PI/2-0.3,0,0.3); body.rUpperArm.rotation.set(-Math.PI/2-0.3,0,-0.3); body.lForearm.rotation.set(0.6,0,0); body.rForearm.rotation.set(0.6,0,0); body.spine.rotation.x=0.2; body.chest.rotation.set(0.1,0,-0.08); body.pelvis.position.y=0.95; },
+    () => { resetPose(); body.lUpperArm.rotation.set(-Math.PI/2-0.3,0,0.3); body.rUpperArm.rotation.set(-Math.PI/2-0.3,0,-0.3); body.lForearm.rotation.set(0.6,0,0); body.rForearm.rotation.set(0.6,0,0); body.spine.rotation.x=0.2; body.chest.rotation.set(0.1,0,-0.08); body.pelvis.position.y=0.97; }
+  ],
+  7: [ // Pelota
+    () => { resetPose(); body.pelvis.position.y=0.7; body.lThigh.rotation.x=-0.6; body.rThigh.rotation.x=-0.6; body.lShin.rotation.x=0.8; body.rShin.rotation.x=0.8; },
+    () => { resetPose(); body.pelvis.position.y=0.75; body.lThigh.rotation.x=-0.6; body.rThigh.rotation.x=-0.6; body.lShin.rotation.x=0.8; body.rShin.rotation.x=0.8; body.spine.rotation.x=-0.06; },
+    () => { resetPose(); body.pelvis.position.y=0.75; body.lThigh.rotation.x=-0.6; body.rThigh.rotation.x=-0.6; body.lShin.rotation.x=0.8; body.rShin.rotation.x=0.8; body.spine.rotation.x=-0.06; body.chest.rotation.z=-0.06; body.lUpperArm.rotation.set(0,0,-Math.PI+0.3); },
+    () => { resetPose(); body.pelvis.position.y=0.77; body.lThigh.rotation.x=-0.6; body.rThigh.rotation.x=-0.6; body.lShin.rotation.x=0.8; body.rShin.rotation.x=0.8; body.spine.rotation.x=-0.06; body.chest.rotation.z=-0.06; body.lUpperArm.rotation.set(0,0,-Math.PI+0.3); }
+  ]
+};
+
+function lerpBodies(from, to, t) {
+  const smooth = t * t * (3 - 2 * t);
+  const parts = ['pelvis','spine','chest','neck','head','lUpperArm','rUpperArm','lForearm','rForearm','lThigh','rThigh','lShin','rShin','root'];
+  
+  resetPose();
+  from();
+  const fromState = {};
+  parts.forEach(p => {
+    fromState[p] = {
+      rx: body[p].rotation.x, ry: body[p].rotation.y, rz: body[p].rotation.z,
+      px: body[p].position.x, py: body[p].position.y, pz: body[p].position.z
+    };
+  });
+
+  resetPose();
+  to();
+  parts.forEach(p => {
+    const f = fromState[p];
+    body[p].rotation.x = f.rx + (body[p].rotation.x - f.rx) * smooth;
+    body[p].rotation.y = f.ry + (body[p].rotation.y - f.ry) * smooth;
+    body[p].rotation.z = f.rz + (body[p].rotation.z - f.rz) * smooth;
+    body[p].position.x = f.px + (body[p].position.x - f.px) * smooth;
+    body[p].position.y = f.py + (body[p].position.y - f.py) * smooth;
+    body[p].position.z = f.pz + (body[p].position.z - f.pz) * smooth;
+  });
+}
+
+function animate() {
+  requestAnimationFrame(animate);
+  const dt = clock.getDelta();
+  if (!paused) {
+    animTime += dt * speedMul * 0.4;
+    const totalDur = exercises[currentEx].phases.length * PHASE_DUR;
+    const loopTime = animTime % totalDur;
+    phaseIdx = Math.floor(loopTime / PHASE_DUR);
+    const phaseT = (loopTime % PHASE_DUR) / PHASE_DUR;
+    
+    const p = poses[currentEx];
+    if (p) {
+      const curPhase = phaseIdx % p.length;
+      const nextPhase = (curPhase + 1) % p.length;
+      lerpBodies(p[curPhase], p[nextPhase], phaseT);
+    }
+
+    const ex = exercises[currentEx];
+    const pn = document.getElementById('phase-name');
+    const bi = document.getElementById('breathe-indicator');
+    if (ex.phases[phaseIdx % ex.phases.length]) {
+      pn.textContent = `Fase ${(phaseIdx%ex.phases.length)+1}: ${ex.phases[phaseIdx%ex.phases.length]}`;
+    }
+    if (ex.breathe[phaseIdx % ex.breathe.length]) {
+      const b = ex.breathe[phaseIdx % ex.breathe.length];
+      bi.className = b.includes('INHALA') ? 'inhale' : 'exhale';
+      bi.textContent = b;
+    } else {
+      bi.textContent = '';
+    }
+  }
+  renderer.render(scene, camera);
+}
+
+function buildSidebar() {
+  const sb = document.getElementById('sidebar');
+  sb.innerHTML = '';
+  exercises.forEach((ex, i) => {
+    const div = document.createElement('div');
+    div.className = 'ex-item' + (i === 0 ? ' active' : '');
+    div.innerHTML = `<div><span class="ex-num">${i+1}</span><span class="ex-name">${ex.name}</span></div><div class="ex-pos">${ex.pos} • ${ex.level}</div>`;
+    div.onclick = () => selectExercise(i);
+    sb.appendChild(div);
+  });
+}
+
+function selectExercise(idx) {
+  currentEx = idx;
+  animTime = 0;
+  phaseIdx = 0;
+  document.querySelectorAll('.ex-item').forEach((el, i) => el.classList.toggle('active', i === idx));
+  document.getElementById('info-title').textContent = `${idx+1}. ${exercises[idx].name}`;
+  document.getElementById('info-desc').textContent = exercises[idx].desc;
+}
+
+function togglePause() {
+  paused = !paused;
+  document.getElementById('pause-btn').textContent = paused ? '▶ Reanudar' : '⏸ Pausar';
+  document.getElementById('pause-btn').classList.toggle('active', paused);
+}
+
+function setSpeed(v) {
+  speedMul = v / 8;
+  document.getElementById('speed-val').textContent = speedMul.toFixed(1) + 'x';
+}
+
+function resetView() {
+  camera.position.set(4, 3, 5);
+  camera.lookAt(0, 1.2, 0);
+}
+
+function toggleGrid() {
+  const g = scene.getObjectByName('grid');
+  if (g) g.visible = !g.visible;
+  document.getElementById('grid-btn').classList.toggle('active');
+}
+
+init();
+</script>
+</body>
+</html>

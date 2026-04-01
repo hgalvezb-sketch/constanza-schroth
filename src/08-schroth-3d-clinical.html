@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Simulador Schroth 3D — Entorno Clínico</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#141420;color:#e0e0e0;overflow:hidden}
+#app{display:flex;flex-direction:column;height:100vh}
+header{background:linear-gradient(135deg,#1b1b30,#252545);padding:10px 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #333355;flex-shrink:0}
+header h1{font-size:16px;font-weight:600;color:#c8d0e0}
+header span{font-size:11px;color:#7788aa;background:#1e1e35;padding:4px 10px;border-radius:12px}
+#stats{display:flex;gap:12px;align-items:center}
+.stat-badge{font-size:11px;background:#1e1e35;padding:4px 10px;border-radius:12px}
+.stat-badge.completed{background:#2d4a3e;color:#66ddaa}
+.stat-badge.streak{background:#3a2d4a;color:#c084fc}
+#main{display:flex;flex:1;min-height:0}
+#sidebar{width:240px;background:#1b1b30;border-right:1px solid #2a2a50;overflow-y:auto;flex-shrink:0}
+#sidebar::-webkit-scrollbar{width:4px}
+#sidebar::-webkit-scrollbar-thumb{background:#3a3a60;border-radius:2px}
+#canvas-wrap{flex:1;position:relative}
+canvas{display:block}
+.ex-item{padding:10px 14px;cursor:pointer;border-bottom:1px solid #222244;transition:all 0.25s;display:flex;align-items:center;gap:10px;position:relative}
+.ex-item:hover{background:#252550}
+.ex-item.active{background:linear-gradient(90deg,#2a2a5a,#1e1e40);border-left:3px solid #7c8cf7}
+.ex-item.completed::after{content:'✓';position:absolute;right:8px;color:#66ddaa;font-size:14px;font-weight:700}
+.ex-n{width:28px;height:28px;border-radius:50%;background:#252550;color:#7c8cf7;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0}
+.ex-item.active .ex-n{background:#7c8cf7;color:#1b1b30}
+.ex-item.completed .ex-n{background:#2d4a3e;color:#66ddaa}
+.ex-info{flex:1;min-width:0}
+.ex-name{font-size:12px;font-weight:600;color:#c8d0e0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ex-sub{font-size:10px;color:#6677aa;margin-top:1px}
+#hud{position:absolute;top:0;left:0;right:0;pointer-events:none;padding:12px}
+#phase-box{display:inline-block;background:rgba(27,27,48,0.88);backdrop-filter:blur(6px);padding:10px 16px;border-radius:10px;border:1px solid #333360;pointer-events:auto}
+#phase-label{font-size:13px;font-weight:600;color:#c8d0e0}
+#phase-step{font-size:11px;color:#7788aa;margin-top:3px}
+#breathe{font-size:12px;margin-top:5px;font-weight:600}
+#timer{font-size:24px;font-weight:700;color:#7c8cf7;margin-top:8px;font-variant-numeric:tabular-nums}
+.inh{color:#66ddaa}.exh{color:#f0a060}
+#ctrl-box{position:absolute;top:12px;right:12px;display:flex;flex-direction:column;gap:6px}
+.cbtn{padding:7px 12px;background:rgba(27,27,48,0.88);border:1px solid #333360;border-radius:8px;color:#a0a8c0;font-size:11px;cursor:pointer;transition:all 0.2s;backdrop-filter:blur(4px);text-align:center;user-select:none}
+.cbtn:hover{background:#2a2a5a;border-color:#7c8cf7;color:#c8d0e0}
+.cbtn.on{background:#7c8cf7;color:#1b1b30;border-color:#7c8cf7}
+.cbtn.complete{background:#2d4a3e;color:#66ddaa;border-color:#66ddaa}
+#bottom-bar{position:absolute;bottom:0;left:0;right:0;background:rgba(27,27,48,0.92);backdrop-filter:blur(8px);border-top:1px solid #333360;padding:12px 18px;display:flex;gap:16px;align-items:flex-start}
+#bot-title{font-size:13px;font-weight:600;color:#7c8cf7;margin-bottom:4px}
+#bot-desc{font-size:11px;color:#8899bb;line-height:1.5;max-height:60px;overflow-y:auto}
+#bot-desc::-webkit-scrollbar{width:3px}
+#bot-desc::-webkit-scrollbar-thumb{background:#3a3a60;border-radius:2px}
+#speed-wrap{position:absolute;bottom:90px;left:12px;background:rgba(27,27,48,0.88);padding:8px 12px;border-radius:8px;border:1px solid #333360;display:flex;align-items:center;gap:8px;backdrop-filter:blur(4px)}
+#speed-wrap label{font-size:10px;color:#7788aa}
+#speed-wrap input[type=range]{width:70px;accent-color:#7c8cf7}
+#sv{font-size:11px;color:#7c8cf7;min-width:28px}
+@media(max-width:700px){
+  #main{flex-direction:column}
+  #sidebar{width:100%;height:100px;flex-direction:row;display:flex;overflow-x:auto;overflow-y:hidden}
+  .ex-item{min-width:130px;border-bottom:none;border-right:1px solid #222244}
+}
+</style>
+</head>
+<body>
+<div id="app">
+<header>
+<h1>Simulador 3D — Ejercicios Schroth</h1>
+<div id="stats">
+<span class="stat-badge completed" id="progress-badge">0/8 hoy</span>
+<span class="stat-badge streak" id="streak-badge">0 días</span>
+<span class="stat-badge">Atajos: ←→ SPACE R F</span>
+</div>
+</header>
+<div id="main">
+<div id="sidebar"></div>
+<div id="canvas-wrap">
+<canvas id="c"></canvas>
+<div id="hud">
+<div id="phase-box">
+<div id="phase-label">Selecciona un ejercicio</div>
+<div id="phase-step"></div>
+<div id="breathe"></div>
+<div id="timer"></div>
+</div>
+</div>
+<div id="ctrl-box">
+<div class="cbtn" onclick="togglePause()" id="pbtn">⏸ Pausar</div>
+<div class="cbtn" onclick="markComplete()" id="compbtn">✓ Completar</div>
+<div class="cbtn" onclick="resetCam()">↻ Reset vista</div>
+<div class="cbtn" onclick="toggleMirror()" id="mbtn">🪞 Espejo</div>
+<div class="cbtn" onclick="toggleProps()" id="propbtn">🔧 Props</div>
+</div>
+<div id="speed-wrap">
+<label>Vel:</label>
+<input type="range" min="2" max="20" value="7" oninput="speedMul=this.value/7;document.getElementById('sv').textContent=(this.value/7).toFixed(1)+'x'">
+<span id="sv">1.0x</span>
+</div>
+<div id="bottom-bar">
+<div style="flex:1">
+<div id="bot-title">Haz clic en un ejercicio para comenzar</div>
+<div id="bot-desc">Usa el panel izquierdo para seleccionar un ejercicio. Arrastra para rotar la vista, scroll para zoom. El maniquí demostrará cada fase del ejercicio con indicaciones de respiración.</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+const EX=[
+{name:"Elongación axial",pos:"De pie",lv:"Básico",desc:"Base del método. De pie frente al espejo, imagina un hilo desde la coronilla. Crece hacia arriba sin ponerte de puntas. Mentón recogido, abdomen activo al 30%. Observa tu simetría en el espejo. Inhala al elongar, exhala manteniendo.",
+ ph:["Postura relajada (con curva visible)","Elongación — crece desde coronilla","Mentón recogido + core activo","Mantener 10s con respiración"],
+ br:["","INHALA — crece","Mantén elongación","EXHALA — sostén"]},
+{name:"Cilindro muscular",pos:"Contra pared",lv:"Intermedio",desc:"Contra la pared, brazo izquierdo arriba, derecho a 90°. Desplaza costillas hacia lado cóncavo aplicando RAB. Este ejercicio crea un cilindro muscular estabilizador. Es el ejercicio más estudiado del método Schroth.",
+ ph:["Espalda apoyada en pared","Brazos en posición correctiva","Desplazamiento costal + RAB","Contracción isométrica"],
+ br:["Normal","INHALA — prepara","INHALA → costillas cóncavas","EXHALA sss... fija"]},
+{name:"Rana en el estanque",pos:"Boca abajo",lv:"Intermedio",desc:"Boca abajo, flexiona rodilla del lado convexo como rana. Presiona rodilla al suelo activando iliopsoas para desrotar pelvis. El iliopsoas conecta columna lumbar con fémur — es la clave para curvas toracolumbares.",
+ ph:["Prono, frente sobre manos","Flexión de rodilla — posición rana","Presión de rodilla al suelo","RAB + desrotación pélvica"],
+ br:["Normal","INHALA — flexiona","EXHALA — presiona","INHALA → cóncavo"]},
+{name:"Autocorrección sentada",pos:"En silla",lv:"Básico",desc:"EL MÁS IMPORTANTE para vida diaria. Cojín bajo nalga del lado convexo para nivelar pelvis. Elonga y desplaza tronco al cóncavo. Practicar TODO el día: escuela, tarea, comida. Para zurdas: papel inclinado 30-45°.",
+ ph:["Sentada relajada (postura incorrecta)","Cojín + elongación axial","Desplazamiento lateral correctivo","Postura corregida mantenida"],
+ br:["","INHALA — elonga","EXHALA — corrige","Respiración normal"]},
+{name:"Side-shift en pared",pos:"Lateral a pared",lv:"Intermedio",desc:"Lado convexo contra pared con pelota en costillas. Brazo superior extendido. Empuja costillas contra pelota mientras tronco se aleja de la pared. RAB expandiendo costillas del lado cóncavo.",
+ ph:["De pie lateral, pelota en costillas","Brazo arriba + posición","Empuja y desplaza (side-shift)","RAB + corrección mantenida"],
+ br:["Normal","INHALA — prepara","EXHALA — empuja","INHALA → cóncavo"]},
+{name:"Respiración RAB",pos:"De lado",lv:"Clave",desc:"Lo MÁS importante del método. Acostada con lado cóncavo arriba. Mano en costillas cóncavas. Inhala dirigiendo aire SOLO ahí — como inflando un globo interno. Esto desrota vértebras desde adentro. Exhala lento con 'sss'.",
+ ph:["Acostada de lado, cóncavo arriba","Mano en costillas del lado cóncavo","INHALA — expande solo ese lado","EXHALA lento — mantén expansión"],
+ br:["Normal","Prepara","INHALA profundo → costillas","EXHALA sss... lento"]},
+{name:"Ejercicio de la puerta",pos:"Marco de puerta",lv:"Básico+",desc:"Ambas manos al marco, paso atrás. La gravedad elonga la columna creando espacio entre vértebras. Desplaza tronco al lado cóncavo con manos fijas. Combina tracción gravitacional con corrección lateral activa.",
+ ph:["Manos al marco, paso atrás","Gravedad elonga columna","Desplazamiento lateral activo","RAB + elongación mantenida"],
+ br:["Normal","INHALA — deja elongar","EXHALA — desplaza","INHALA RAB"]},
+{name:"Pelota suiza",pos:"Sobre pelota",lv:"Intermedio",desc:"La inestabilidad de la pelota activa musculatura profunda automáticamente. Elonga, desplaza pelvis al cóncavo. Avanzado: brazo cóncavo arriba. Trabaja estabilización + autocorrección simultáneamente.",
+ ph:["Sentada estable sobre pelota","Elongación + core activo","Desplazamiento + brazo arriba","RAB + equilibrio mantenido"],
+ br:["Normal","INHALA — elonga","EXHALA — desplaza","INHALA RAB"]}
+];
+
+let scene,cam,ren,clock,B={},curEx=0,paused=false,speedMul=1,aTime=0,pIdx=0;
+const PD=2.8;
+let camT=Math.PI/5,camP=0.35,camD=5.5;
+let drag=false,px=0,py=0;
+let mirrorOn=true,propsOn=true;
+let mirrorGroup,propsGroup;
+
+// Tracking & Timer
+let phaseTimer=0;
+const PHASE_DURATION=10; // segundos por fase
+let completedToday=new Set();
+let streakDays=0;
+
+// LocalStorage keys
+const STORAGE_KEY='schroth_progress';
+const LAST_DATE_KEY='schroth_last_date';
+
+// Progress tracking functions
+function loadProgress(){
+  try{
+    const today=new Date().toDateString();
+    const lastDate=localStorage.getItem(LAST_DATE_KEY);
+
+    if(lastDate===today){
+      const saved=localStorage.getItem(STORAGE_KEY);
+      if(saved){
+        completedToday=new Set(JSON.parse(saved));
+      }
+    }else{
+      // New day - reset completions but update streak
+      if(lastDate){
+        const last=new Date(lastDate);
+        const now=new Date();
+        const diffDays=Math.floor((now-last)/(1000*60*60*24));
+        if(diffDays===1){
+          // Consecutive day
+          const streakKey='schroth_streak';
+          streakDays=(parseInt(localStorage.getItem(streakKey))||0)+1;
+          localStorage.setItem(streakKey,streakDays);
+        }else if(diffDays>1){
+          // Streak broken
+          streakDays=0;
+          localStorage.setItem('schroth_streak','0');
+        }
+      }
+      completedToday=new Set();
+      localStorage.setItem(STORAGE_KEY,JSON.stringify([]));
+      localStorage.setItem(LAST_DATE_KEY,today);
+    }
+
+    streakDays=parseInt(localStorage.getItem('schroth_streak'))||0;
+  }catch(e){console.error('Error loading progress:',e)}
+  updateProgressUI();
+}
+
+function saveProgress(){
+  try{
+    localStorage.setItem(STORAGE_KEY,JSON.stringify([...completedToday]));
+  }catch(e){console.error('Error saving progress:',e)}
+}
+
+function markComplete(){
+  completedToday.add(curEx);
+  saveProgress();
+  updateProgressUI();
+
+  // Show feedback
+  const btn=document.getElementById('compbtn');
+  btn.classList.add('complete');
+  btn.textContent='✓ Completado!';
+  setTimeout(()=>{
+    btn.classList.remove('complete');
+    btn.textContent='✓ Completar';
+  },2000);
+}
+
+function updateProgressUI(){
+  const progress=document.getElementById('progress-badge');
+  const streak=document.getElementById('streak-badge');
+
+  progress.textContent=`${completedToday.size}/8 hoy`;
+  streak.textContent=`${streakDays} día${streakDays!==1?'s':''}`;
+
+  // Update sidebar
+  document.querySelectorAll('.ex-item').forEach((el,i)=>{
+    if(completedToday.has(i)){
+      el.classList.add('completed');
+    }else{
+      el.classList.remove('completed');
+    }
+  });
+}
+
+function init(){
+  loadProgress();
+
+  const cv=document.getElementById('c'),wr=document.getElementById('canvas-wrap');
+  scene=new THREE.Scene();
+  scene.background=new THREE.Color(0x1a1a28);
+
+  cam=new THREE.PerspectiveCamera(45,wr.clientWidth/wr.clientHeight,0.1,80);
+  ren=new THREE.WebGLRenderer({canvas:cv,antialias:true});
+  ren.setSize(wr.clientWidth,wr.clientHeight);
+  ren.setPixelRatio(Math.min(devicePixelRatio,2));
+  ren.shadowMap.enabled=true;
+  ren.shadowMap.type=THREE.PCFSoftShadowMap;
+  ren.toneMapping=THREE.ACESFilmicToneMapping;
+  ren.toneMappingExposure=1.1;
+
+  scene.add(new THREE.AmbientLight(0x8899cc,0.5));
+  const dl=new THREE.DirectionalLight(0xfff5e6,0.8);dl.position.set(3,6,4);dl.castShadow=true;
+  dl.shadow.mapSize.set(2048,2048);dl.shadow.camera.near=0.5;dl.shadow.camera.far=20;
+  dl.shadow.camera.left=-4;dl.shadow.camera.right=4;dl.shadow.camera.top=4;dl.shadow.camera.bottom=-4;
+  scene.add(dl);
+  const fl=new THREE.DirectionalLight(0x6688cc,0.25);fl.position.set(-3,3,-2);scene.add(fl);
+  const rl=new THREE.PointLight(0x7c8cf7,0.15,10);rl.position.set(0,3,0);scene.add(rl);
+
+  buildRoom();
+  buildMirror();
+  buildProps();
+  buildBody();
+  buildSidebar();
+  selectEx(0);
+  updateCam();
+
+  cv.addEventListener('pointerdown',e=>{drag=true;px=e.clientX;py=e.clientY});
+  window.addEventListener('pointerup',()=>drag=false);
+  window.addEventListener('pointermove',e=>{
+    if(!drag)return;
+    camT-=(e.clientX-px)*0.007;
+    camP=Math.max(-0.2,Math.min(1.1,camP+(e.clientY-py)*0.007));
+    px=e.clientX;py=e.clientY;updateCam();
+  });
+  cv.addEventListener('wheel',e=>{camD=Math.max(2.5,Math.min(10,camD+e.deltaY*0.004));updateCam();e.preventDefault()},{passive:false});
+  window.addEventListener('resize',()=>{cam.aspect=wr.clientWidth/wr.clientHeight;cam.updateProjectionMatrix();ren.setSize(wr.clientWidth,wr.clientHeight)});
+
+  // Keyboard navigation
+  window.addEventListener('keydown',e=>{
+    switch(e.key){
+      case 'ArrowLeft':
+        selectEx((curEx-1+EX.length)%EX.length);
+        break;
+      case 'ArrowRight':
+        selectEx((curEx+1)%EX.length);
+        break;
+      case ' ':
+        e.preventDefault();
+        togglePause();
+        break;
+      case 'r':
+      case 'R':
+        resetCam();
+        break;
+      case 'f':
+      case 'F':
+        if(!document.fullscreenElement){
+          document.documentElement.requestFullscreen();
+        }else{
+          document.exitFullscreen();
+        }
+        break;
+      case 'Escape':
+        if(document.fullscreenElement){
+          document.exitFullscreen();
+        }
+        break;
+    }
+  });
+
+  clock=new THREE.Clock();
+  loop();
+}
+
+function updateCam(){
+  cam.position.x=camD*Math.sin(camT)*Math.cos(camP);
+  cam.position.y=camD*Math.sin(camP)+1.2;
+  cam.position.z=camD*Math.cos(camT)*Math.cos(camP);
+  cam.lookAt(0,1.1,0);
+}
+function resetCam(){camT=Math.PI/5;camP=0.35;camD=5.5;updateCam()}
+
+function buildRoom(){
+  // Floor - wooden
+  const floorG=new THREE.PlaneGeometry(8,8);
+  const floorM=new THREE.MeshStandardMaterial({color:0x8b7355,roughness:0.85,metalness:0.0});
+  const floor=new THREE.Mesh(floorG,floorM);floor.rotation.x=-Math.PI/2;floor.receiveShadow=true;scene.add(floor);
+
+  // Back wall
+  const wallG=new THREE.PlaneGeometry(8,4);
+  const wallM=new THREE.MeshStandardMaterial({color:0xd5cfc2,roughness:0.95});
+  const wall=new THREE.Mesh(wallG,wallM);wall.position.set(0,2,-3);wall.receiveShadow=true;scene.add(wall);
+
+  // Side wall
+  const sw=new THREE.Mesh(wallG,wallM);sw.position.set(-4,2,0);sw.rotation.y=Math.PI/2;sw.receiveShadow=true;scene.add(sw);
+
+  // Baseboard
+  const bbG=new THREE.BoxGeometry(8,0.12,0.04);
+  const bbM=new THREE.MeshStandardMaterial({color:0xf5f0e8,roughness:0.6});
+  const bb=new THREE.Mesh(bbG,bbM);bb.position.set(0,0.06,-2.98);scene.add(bb);
+  const bb2=new THREE.Mesh(new THREE.BoxGeometry(0.04,0.12,8),bbM);bb2.position.set(-3.98,0.06,0);scene.add(bb2);
+}
+
+function buildMirror(){
+  mirrorGroup=new THREE.Group();
+  // Frame
+  const frameM=new THREE.MeshStandardMaterial({color:0x3a3530,roughness:0.4,metalness:0.3});
+  const ft=new THREE.Mesh(new THREE.BoxGeometry(1.4,2.2,0.06),frameM);ft.position.set(0,1.5,-2.95);mirrorGroup.add(ft);
+  // Mirror surface
+  const mirM=new THREE.MeshStandardMaterial({color:0xb8c8d8,roughness:0.05,metalness:0.85,envMapIntensity:1.0});
+  const mir=new THREE.Mesh(new THREE.PlaneGeometry(1.25,2.0),mirM);mir.position.set(0,1.5,-2.92);mirrorGroup.add(mir);
+  // Mirror sheen
+  const sheenM=new THREE.MeshBasicMaterial({color:0xddddee,transparent:true,opacity:0.06});
+  const sheen=new THREE.Mesh(new THREE.PlaneGeometry(1.25,2.0),sheenM);sheen.position.set(0,1.5,-2.91);mirrorGroup.add(sheen);
+  scene.add(mirrorGroup);
+}
+
+function buildProps(){
+  propsGroup=new THREE.Group();
+  // Swiss ball
+  const ballG=new THREE.SphereGeometry(0.32,24,24);
+  const ballM=new THREE.MeshStandardMaterial({color:0x4477bb,roughness:0.4,metalness:0.05});
+  const ball=new THREE.Mesh(ballG,ballM);ball.position.set(2.2,0.32,1);ball.castShadow=true;propsGroup.add(ball);
+
+  // Yoga mat
+  const matG=new THREE.BoxGeometry(0.7,0.015,1.8);
+  const matM=new THREE.MeshStandardMaterial({color:0x6b9080,roughness:0.8});
+  const mat=new THREE.Mesh(matG,matM);mat.position.set(-1.8,0.008,0.5);mat.castShadow=true;mat.receiveShadow=true;propsGroup.add(mat);
+
+  // Small towel (rolled)
+  const towG=new THREE.CylinderGeometry(0.04,0.04,0.4,12);
+  const towM=new THREE.MeshStandardMaterial({color:0xe8e0d0,roughness:0.9});
+  const tow=new THREE.Mesh(towG,towM);tow.position.set(2.0,0.04,0.2);tow.rotation.z=Math.PI/2;propsGroup.add(tow);
+
+  // Water bottle
+  const botG=new THREE.CylinderGeometry(0.03,0.035,0.22,10);
+  const botM=new THREE.MeshStandardMaterial({color:0x88bbee,roughness:0.1,metalness:0.3,transparent:true,opacity:0.7});
+  const bot=new THREE.Mesh(botG,botM);bot.position.set(2.3,0.11,0.3);propsGroup.add(bot);
+
+  scene.add(propsGroup);
+}
+
+// Body builder — anatomical proportions for adolescent female
+const SK=0xdeb896,CL1=0x2d2d4e,CL2=0x3d3d6e,JC=0xc9a07a,HR=0x2a1a10;
+
+function cyl(rt,rb,h,col){
+  const g=new THREE.CylinderGeometry(rt,rb,h,10);
+  const m=new THREE.MeshStandardMaterial({color:col,roughness:0.65,metalness:0.0});
+  const mesh=new THREE.Mesh(g,m);mesh.castShadow=true;return mesh;
+}
+function sph(r,col){
+  const g=new THREE.SphereGeometry(r,14,14);
+  const m=new THREE.MeshStandardMaterial({color:col||JC,roughness:0.55});
+  const mesh=new THREE.Mesh(g,m);mesh.castShadow=true;return mesh;
+}
+
+function buildBody(){
+  const root=new THREE.Group();root.name='hum';
+
+  const pelvis=new THREE.Group();pelvis.position.y=0.95;
+  pelvis.add(cyl(0.14,0.16,0.14,CL2));
+
+  const spine=new THREE.Group();spine.position.y=0.07;
+  const spM=cyl(0.11,0.12,0.30,CL1);spM.position.y=0.15;spine.add(spM);
+
+  const chest=new THREE.Group();chest.position.y=0.32;
+  const chM=cyl(0.15,0.13,0.28,CL1);chM.position.y=0.14;chest.add(chM);
+  // Shoulder contour
+  const shBar=cyl(0.04,0.04,0.36,CL1);shBar.rotation.z=Math.PI/2;shBar.position.y=0.24;chest.add(shBar);
+
+  const neck=new THREE.Group();neck.position.y=0.30;
+  neck.add(cyl(0.05,0.055,0.10,SK));
+
+  const head=new THREE.Group();head.position.y=0.12;
+  // Head shape — slightly oval
+  const headG=new THREE.SphereGeometry(0.105,16,16);headG.scale(1,1.15,0.95);
+  const headMesh=new THREE.Mesh(headG,new THREE.MeshStandardMaterial({color:SK,roughness:0.55}));
+  headMesh.position.y=0.05;headMesh.castShadow=true;head.add(headMesh);
+  // Hair
+  const hairG=new THREE.SphereGeometry(0.115,16,16,0,Math.PI*2,0,Math.PI*0.55);
+  const hairMesh=new THREE.Mesh(hairG,new THREE.MeshStandardMaterial({color:HR,roughness:0.85}));
+  hairMesh.position.y=0.07;head.add(hairMesh);
+  // Ponytail
+  const ptG=new THREE.CylinderGeometry(0.03,0.015,0.22,8);
+  const pt=new THREE.Mesh(ptG,new THREE.MeshStandardMaterial({color:HR,roughness:0.85}));
+  pt.position.set(0,0.0,-0.10);pt.rotation.x=0.6;head.add(pt);
+
+  // Arms
+  function buildArm(side){
+    const s=side==='l'?-1:1;
+    const shoulder=new THREE.Group();shoulder.position.set(s*0.20,0.24,0);
+    shoulder.add(sph(0.05));
+    const upper=new THREE.Group();
+    const uM=cyl(0.035,0.032,0.26,SK);uM.position.y=-0.13;upper.add(uM);
+    shoulder.add(upper);
+    const elbow=new THREE.Group();elbow.position.y=-0.28;
+    elbow.add(sph(0.034));
+    const fore=new THREE.Group();
+    const fM=cyl(0.03,0.025,0.23,SK);fM.position.y=-0.115;fore.add(fM);
+    // Hand
+    const hand=sph(0.028,SK);hand.position.y=-0.24;fore.add(hand);
+    elbow.add(fore);
+    upper.add(elbow);
+    return{shoulder,upper,elbow,fore};
+  }
+  const la=buildArm('l'),ra=buildArm('r');
+  chest.add(la.shoulder);chest.add(ra.shoulder);
+
+  // Legs
+  function buildLeg(side){
+    const s=side==='l'?-1:1;
+    const hip=new THREE.Group();hip.position.set(s*0.09,-0.07,0);
+    hip.add(sph(0.055));
+    const thigh=new THREE.Group();
+    const tM=cyl(0.055,0.048,0.38,CL2);tM.position.y=-0.19;thigh.add(tM);
+    hip.add(thigh);
+    const knee=new THREE.Group();knee.position.y=-0.40;
+    knee.add(sph(0.042));
+    const shin=new THREE.Group();
+    const sM=cyl(0.04,0.035,0.35,SK);sM.position.y=-0.175;shin.add(sM);
+    knee.add(shin);
+    const foot=new THREE.Group();foot.position.y=-0.37;
+    const fMesh=new THREE.Mesh(new THREE.BoxGeometry(0.08,0.045,0.17),
+      new THREE.MeshStandardMaterial({color:0x555555,roughness:0.7}));
+    fMesh.position.set(0,-0.02,0.035);fMesh.castShadow=true;foot.add(fMesh);
+    shin.add(foot);
+    thigh.add(knee);
+    return{hip,thigh,knee,shin,foot};
+  }
+  const ll=buildLeg('l'),rl=buildLeg('r');
+
+  chest.add(neck);neck.add(head);
+  spine.add(chest);
+  pelvis.add(spine);pelvis.add(ll.hip);pelvis.add(rl.hip);
+  root.add(pelvis);
+  scene.add(root);
+
+  B={root,pelvis,spine,chest,neck,head,
+     lSh:la.shoulder,lUp:la.upper,lEl:la.elbow,lFo:la.fore,
+     rSh:ra.shoulder,rUp:ra.upper,rEl:ra.elbow,rFo:ra.fore,
+     lHp:ll.hip,lTh:ll.thigh,lKn:ll.knee,lSn:ll.shin,lFt:ll.foot,
+     rHp:rl.hip,rTh:rl.thigh,rKn:rl.knee,rSn:rl.shin,rFt:rl.foot};
+}
+
+function rp(){
+  B.pelvis.position.set(0,0.95,0);B.pelvis.rotation.set(0,0,0);
+  B.spine.rotation.set(0,0,0);B.chest.rotation.set(0,0,0);
+  B.neck.rotation.set(0,0,0);B.head.rotation.set(0,0,0);
+  B.lUp.rotation.set(0,0,0.12);B.rUp.rotation.set(0,0,-0.12);
+  B.lFo.rotation.set(0,0,0);B.rFo.rotation.set(0,0,0);
+  B.lTh.rotation.set(0,0,0);B.rTh.rotation.set(0,0,0);
+  B.lSn.rotation.set(0,0,0);B.rSn.rotation.set(0,0,0);
+  B.root.rotation.set(0,0,0);B.root.position.set(0,0,0);
+}
+
+const P={
+0:[
+  ()=>{rp();B.spine.rotation.z=0.04;B.chest.rotation.z=-0.03;B.pelvis.position.y=0.93;B.chest.rotation.x=0.06;},
+  ()=>{rp();B.pelvis.position.y=1.02;B.spine.rotation.x=-0.04;},
+  ()=>{rp();B.pelvis.position.y=1.05;B.neck.rotation.x=0.1;B.spine.rotation.x=-0.05;},
+  ()=>{rp();B.pelvis.position.y=1.05;B.neck.rotation.x=0.1;B.spine.rotation.x=-0.05;B.chest.rotation.x=-0.03;}
+],
+1:[
+  ()=>{rp();},
+  ()=>{rp();B.lUp.rotation.set(0,0,-Math.PI+0.3);B.rUp.rotation.set(-0.2,0,-Math.PI/2);B.rFo.rotation.set(-Math.PI/2,0,0);},
+  ()=>{rp();B.lUp.rotation.set(0,0,-Math.PI+0.3);B.rUp.rotation.set(-0.2,0,-Math.PI/2);B.rFo.rotation.set(-Math.PI/2,0,0);B.chest.rotation.z=0.1;B.spine.rotation.z=0.06;},
+  ()=>{rp();B.lUp.rotation.set(0,0,-Math.PI+0.3);B.rUp.rotation.set(-0.2,0,-Math.PI/2);B.rFo.rotation.set(-Math.PI/2,0,0);B.chest.rotation.z=0.1;B.spine.rotation.z=0.06;B.pelvis.position.y=1.03;}
+],
+2:[
+  ()=>{rp();B.root.rotation.x=Math.PI/2;B.root.position.y=0.18;B.pelvis.position.y=0;B.lUp.rotation.set(Math.PI/2,0,0.4);B.rUp.rotation.set(Math.PI/2,0,-0.4);B.lFo.rotation.x=0.3;B.rFo.rotation.x=0.3;},
+  ()=>{rp();B.root.rotation.x=Math.PI/2;B.root.position.y=0.18;B.pelvis.position.y=0;B.lUp.rotation.set(Math.PI/2,0,0.4);B.rUp.rotation.set(Math.PI/2,0,-0.4);B.lFo.rotation.x=0.3;B.rFo.rotation.x=0.3;B.rTh.rotation.set(0,0,-Math.PI/3);},
+  ()=>{rp();B.root.rotation.x=Math.PI/2;B.root.position.y=0.18;B.pelvis.position.y=0;B.lUp.rotation.set(Math.PI/2,0,0.4);B.rUp.rotation.set(Math.PI/2,0,-0.4);B.lFo.rotation.x=0.3;B.rFo.rotation.x=0.3;B.rTh.rotation.set(0,0.3,-Math.PI/3);B.rSn.rotation.x=Math.PI/2.5;},
+  ()=>{rp();B.root.rotation.x=Math.PI/2;B.root.position.y=0.18;B.pelvis.position.y=0;B.lUp.rotation.set(Math.PI/2,0,0.4);B.rUp.rotation.set(Math.PI/2,0,-0.4);B.lFo.rotation.x=0.3;B.rFo.rotation.x=0.3;B.rTh.rotation.set(0,0.3,-Math.PI/3);B.rSn.rotation.x=Math.PI/2.5;B.pelvis.rotation.y=0.08;}
+],
+3:[
+  ()=>{rp();B.pelvis.position.y=0.55;B.lTh.rotation.x=-Math.PI/2;B.rTh.rotation.x=-Math.PI/2;B.lSn.rotation.x=Math.PI/2;B.rSn.rotation.x=Math.PI/2;B.spine.rotation.z=0.07;B.chest.rotation.set(0.12,0,0.04);},
+  ()=>{rp();B.pelvis.position.y=0.58;B.lTh.rotation.x=-Math.PI/2;B.rTh.rotation.x=-Math.PI/2;B.lSn.rotation.x=Math.PI/2;B.rSn.rotation.x=Math.PI/2;B.spine.rotation.x=-0.04;},
+  ()=>{rp();B.pelvis.position.y=0.60;B.lTh.rotation.x=-Math.PI/2;B.rTh.rotation.x=-Math.PI/2;B.lSn.rotation.x=Math.PI/2;B.rSn.rotation.x=Math.PI/2;B.spine.rotation.x=-0.04;B.chest.rotation.z=-0.07;},
+  ()=>{rp();B.pelvis.position.y=0.60;B.lTh.rotation.x=-Math.PI/2;B.rTh.rotation.x=-Math.PI/2;B.lSn.rotation.x=Math.PI/2;B.rSn.rotation.x=Math.PI/2;B.spine.rotation.x=-0.04;B.chest.rotation.z=-0.07;B.neck.rotation.x=0.08;}
+],
+4:[
+  ()=>{rp();B.root.rotation.y=Math.PI/2;},
+  ()=>{rp();B.root.rotation.y=Math.PI/2;B.lUp.rotation.set(0,0,-Math.PI+0.2);B.pelvis.position.y=1.0;},
+  ()=>{rp();B.root.rotation.y=Math.PI/2;B.lUp.rotation.set(0,0,-Math.PI+0.2);B.chest.rotation.z=0.14;B.spine.rotation.z=0.07;B.pelvis.position.y=1.0;},
+  ()=>{rp();B.root.rotation.y=Math.PI/2;B.lUp.rotation.set(0,0,-Math.PI+0.2);B.chest.rotation.z=0.14;B.spine.rotation.z=0.07;B.pelvis.position.y=1.03;}
+],
+5:[
+  ()=>{rp();B.root.rotation.z=Math.PI/2;B.root.position.set(0,0.28,0);B.pelvis.position.y=0;B.lTh.rotation.x=-0.12;B.rTh.rotation.x=-0.12;B.lSn.rotation.x=0.25;B.rSn.rotation.x=0.25;},
+  ()=>{rp();B.root.rotation.z=Math.PI/2;B.root.position.set(0,0.28,0);B.pelvis.position.y=0;B.lTh.rotation.x=-0.12;B.rTh.rotation.x=-0.12;B.lSn.rotation.x=0.25;B.rSn.rotation.x=0.25;B.rUp.rotation.set(0,0,Math.PI/3.5);B.rFo.rotation.x=-0.4;},
+  ()=>{rp();B.root.rotation.z=Math.PI/2;B.root.position.set(0,0.33,0);B.pelvis.position.y=0;B.lTh.rotation.x=-0.12;B.rTh.rotation.x=-0.12;B.lSn.rotation.x=0.25;B.rSn.rotation.x=0.25;B.rUp.rotation.set(0,0,Math.PI/3.5);B.rFo.rotation.x=-0.4;B.chest.rotation.z=0.07;},
+  ()=>{rp();B.root.rotation.z=Math.PI/2;B.root.position.set(0,0.28,0);B.pelvis.position.y=0;B.lTh.rotation.x=-0.12;B.rTh.rotation.x=-0.12;B.lSn.rotation.x=0.25;B.rSn.rotation.x=0.25;B.rUp.rotation.set(0,0,Math.PI/3.5);B.rFo.rotation.x=-0.4;}
+],
+6:[
+  ()=>{rp();B.lUp.rotation.set(-Math.PI/2-0.3,0,0.3);B.rUp.rotation.set(-Math.PI/2-0.3,0,-0.3);B.lFo.rotation.x=0.5;B.rFo.rotation.x=0.5;B.spine.rotation.x=0.12;B.pelvis.position.y=0.95;},
+  ()=>{rp();B.lUp.rotation.set(-Math.PI/2-0.3,0,0.3);B.rUp.rotation.set(-Math.PI/2-0.3,0,-0.3);B.lFo.rotation.x=0.5;B.rFo.rotation.x=0.5;B.spine.rotation.x=0.18;B.chest.rotation.x=0.08;B.pelvis.position.y=0.92;},
+  ()=>{rp();B.lUp.rotation.set(-Math.PI/2-0.3,0,0.3);B.rUp.rotation.set(-Math.PI/2-0.3,0,-0.3);B.lFo.rotation.x=0.5;B.rFo.rotation.x=0.5;B.spine.rotation.x=0.18;B.chest.rotation.set(0.08,0,-0.09);B.pelvis.position.y=0.92;},
+  ()=>{rp();B.lUp.rotation.set(-Math.PI/2-0.3,0,0.3);B.rUp.rotation.set(-Math.PI/2-0.3,0,-0.3);B.lFo.rotation.x=0.5;B.rFo.rotation.x=0.5;B.spine.rotation.x=0.18;B.chest.rotation.set(0.08,0,-0.09);B.pelvis.position.y=0.94;}
+],
+7:[
+  ()=>{rp();B.pelvis.position.y=0.65;B.lTh.rotation.x=-0.55;B.rTh.rotation.x=-0.55;B.lSn.rotation.x=0.7;B.rSn.rotation.x=0.7;},
+  ()=>{rp();B.pelvis.position.y=0.70;B.lTh.rotation.x=-0.55;B.rTh.rotation.x=-0.55;B.lSn.rotation.x=0.7;B.rSn.rotation.x=0.7;B.spine.rotation.x=-0.05;},
+  ()=>{rp();B.pelvis.position.y=0.70;B.lTh.rotation.x=-0.55;B.rTh.rotation.x=-0.55;B.lSn.rotation.x=0.7;B.rSn.rotation.x=0.7;B.spine.rotation.x=-0.05;B.chest.rotation.z=-0.07;B.lUp.rotation.set(0,0,-Math.PI+0.3);},
+  ()=>{rp();B.pelvis.position.y=0.72;B.lTh.rotation.x=-0.55;B.rTh.rotation.x=-0.55;B.lSn.rotation.x=0.7;B.rSn.rotation.x=0.7;B.spine.rotation.x=-0.05;B.chest.rotation.z=-0.07;B.lUp.rotation.set(0,0,-Math.PI+0.3);}
+]
+};
+
+function lerp(a,b,t){return a+(b-a)*t}
+function smooth(t){return t*t*(3-2*t)}
+
+function lerpPose(fi,ti,t){
+  const s=smooth(t);
+  const parts=['pelvis','spine','chest','neck','head','lUp','rUp','lFo','rFo','lTh','rTh','lSn','rSn','root'];
+  rp();fi();
+  const from={};
+  parts.forEach(p=>{from[p]={rx:B[p].rotation.x,ry:B[p].rotation.y,rz:B[p].rotation.z,px:B[p].position.x,py:B[p].position.y,pz:B[p].position.z}});
+  rp();ti();
+  parts.forEach(p=>{
+    const f=from[p];
+    B[p].rotation.x=lerp(f.rx,B[p].rotation.x,s);
+    B[p].rotation.y=lerp(f.ry,B[p].rotation.y,s);
+    B[p].rotation.z=lerp(f.rz,B[p].rotation.z,s);
+    B[p].position.x=lerp(f.px,B[p].position.x,s);
+    B[p].position.y=lerp(f.py,B[p].position.y,s);
+    B[p].position.z=lerp(f.pz,B[p].position.z,s);
+  });
+}
+
+function loop(){
+  requestAnimationFrame(loop);
+  const dt=clock.getDelta();
+  if(!paused){
+    aTime+=dt*speedMul*0.35;
+    phaseTimer+=dt;
+
+    const ps=P[curEx];
+    if(ps){
+      const total=ps.length*PD;
+      const lt=aTime%total;
+      pIdx=Math.floor(lt/PD)%ps.length;
+      const t=(lt%PD)/PD;
+      lerpPose(ps[pIdx],ps[(pIdx+1)%ps.length],t);
+    }
+    const ex=EX[curEx];
+    const pl=document.getElementById('phase-label');
+    const ps2=document.getElementById('phase-step');
+    const br=document.getElementById('breathe');
+    const tim=document.getElementById('timer');
+
+    const pi=pIdx%ex.ph.length;
+    pl.textContent=ex.ph[pi];
+    ps2.textContent=`Fase ${pi+1} de ${ex.ph.length}`;
+    const bv=ex.br[pi];
+    if(bv){br.className=bv.includes('INHALA')?'inh':'exh';br.textContent=bv}else{br.textContent=''}
+
+    // Timer
+    const remaining=Math.max(0,PHASE_DURATION-phaseTimer);
+    const mins=Math.floor(remaining/60);
+    const secs=Math.floor(remaining%60);
+    tim.textContent=`${mins}:${secs.toString().padStart(2,'0')}`;
+  }
+  // Subtle breathing animation
+  if(B.chest){
+    const breathAmp=paused?0:0.006;
+    B.chest.scale.x=1+Math.sin(aTime*2)*breathAmp;
+    B.chest.scale.z=1+Math.sin(aTime*2)*breathAmp;
+  }
+  ren.render(scene,cam);
+}
+
+function buildSidebar(){
+  const sb=document.getElementById('sidebar');
+  EX.forEach((ex,i)=>{
+    const d=document.createElement('div');
+    d.className='ex-item'+(i===0?' active':'');
+    d.innerHTML=`<div class="ex-n">${i+1}</div><div class="ex-info"><div class="ex-name">${ex.name}</div><div class="ex-sub">${ex.pos} • ${ex.lv}</div></div>`;
+    d.onclick=()=>selectEx(i);
+    sb.appendChild(d);
+  });
+}
+
+function selectEx(i){
+  curEx=i;aTime=0;pIdx=0;phaseTimer=0;
+  document.querySelectorAll('.ex-item').forEach((e,j)=>e.classList.toggle('active',j===i));
+  document.getElementById('bot-title').textContent=`${i+1}. ${EX[i].name}`;
+  document.getElementById('bot-desc').textContent=EX[i].desc;
+  updateProgressUI();
+}
+
+function togglePause(){paused=!paused;document.getElementById('pbtn').textContent=paused?'▶ Play':'⏸ Pausar';document.getElementById('pbtn').classList.toggle('on',paused)}
+function toggleMirror(){mirrorOn=!mirrorOn;mirrorGroup.visible=mirrorOn;document.getElementById('mbtn').classList.toggle('on',!mirrorOn)}
+function toggleProps(){propsOn=!propsOn;propsGroup.visible=propsOn;document.getElementById('propbtn').classList.toggle('on',!propsOn)}
+
+init();
+</script>
+</body>
+</html>

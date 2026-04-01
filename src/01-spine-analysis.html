@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Análisis de Columna</title>
+<style>
+*{box-sizing:border-box;margin:0}body{font-family:'Segoe UI',system-ui,sans-serif;background:#0f0f1a;color:#c8d0e0;padding:20px;max-width:800px;margin:0 auto}
+.card{background:#1b1b30;border:1px solid #2a2a50;border-radius:12px;padding:20px;margin-bottom:16px}
+.st{font-size:16px;font-weight:600;color:#e0e0f0;margin-bottom:12px}
+.warn{background:#2a1a10;border:1px solid #5a3a20;border-radius:8px;padding:12px;font-size:12px;color:#f0a050;margin-bottom:16px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+@media(max-width:500px){.grid{grid-template-columns:1fr}}
+.mc{background:#252545;border-radius:8px;padding:16px;text-align:center}
+.mc-l{font-size:11px;color:#7788aa;margin-bottom:4px}.mc-v{font-size:22px;font-weight:600;color:#e0e0f0}
+.mc-s{font-size:11px;color:#f0a050;margin-top:4px}
+.info-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #2a2a50;font-size:13px}
+.info-row:last-child{border-bottom:none}.ik{color:#7788aa}.iv{color:#c8d0e0;font-weight:500}
+.badge{padding:2px 8px;border-radius:6px;font-size:10px;font-weight:600}
+.b-w{background:#2a2a10;color:#f0c050}.b-d{background:#2a1010;color:#f06050}.b-i{background:#10102a;color:#6088f0}.b-s{background:#102a10;color:#50f060}
+.sev-bar{height:12px;border-radius:6px;background:linear-gradient(to right,#50f060,#f0c050,#f08080,#f04040);margin:12px 0;position:relative}
+.sev-m{position:absolute;top:-4px;width:4px;height:20px;background:#e0e0f0;border-radius:2px;transition:left 0.3s}
+.sev-l{display:flex;justify-content:space-between;font-size:10px;color:#7788aa}
+.tabs{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
+.tab{padding:6px 12px;border-radius:8px;font-size:12px;cursor:pointer;border:1px solid #2a2a50;background:transparent;color:#7788aa;transition:all 0.2s}
+.tab.active{background:#252560;color:#7c8cf7;border-color:#7c8cf7}
+.pane{display:none}.pane.active{display:block}
+.rec{display:flex;gap:10px;padding:10px 0;border-bottom:1px solid #2a2a50}
+.rec:last-child{border-bottom:none}
+.rec-n{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;flex-shrink:0}
+.rec-t{font-size:13px;line-height:1.5}.rec-h{font-weight:600;margin-bottom:2px}
+</style></head><body>
+<div class="warn">⚠️ Este análisis es educativo. No constituye diagnóstico médico. Consultar con ortopedista/traumatólogo.</div>
+<div class="grid">
+<div class="mc"><div class="mc-l">Estimación ángulo de Cobb</div><div class="mc-v" id="cv">~15-25°</div><div class="mc-s">Requiere medición profesional</div></div>
+<div class="mc"><div class="mc-l">Clasificación estimada</div><div class="mc-v" style="font-size:18px">Leve a moderada</div><div class="mc-s">Toracolumbar</div></div>
+</div>
+<div class="card">
+<div class="st">Escala de severidad</div>
+<div style="margin-bottom:8px"><label style="font-size:12px;color:#7788aa">Simula ángulo de Cobb:</label>
+<input type="range" min="0" max="80" value="20" id="cs" style="width:100%;accent-color:#7c8cf7" oninput="updateC(this.value)"></div>
+<div class="sev-bar"><div class="sev-m" id="sm" style="left:25%"></div></div>
+<div class="sev-l"><span>0° Normal</span><span>10° Leve</span><span>25° Moderada</span><span>40° Severa</span><span>80°+</span></div>
+<div style="margin-top:12px">
+<div class="info-row"><span class="ik">Ángulo simulado</span><span class="iv" id="sa">20°</span></div>
+<div class="info-row"><span class="ik">Clasificación</span><span class="iv" id="sc">Escoliosis leve</span></div>
+<div class="info-row"><span class="ik">Tratamiento típico</span><span class="iv" id="st2">Observación + fisioterapia</span></div>
+<div class="info-row"><span class="ik">Seguimiento</span><span class="iv" id="sf">Cada 6-12 meses</span></div>
+</div></div>
+<div class="card">
+<div class="st">Recomendaciones por fase</div>
+<div class="tabs">
+<div class="tab active" onclick="showP(0)">Inmediato</div>
+<div class="tab" onclick="showP(1)">Tratamiento</div>
+<div class="tab" onclick="showP(2)">Largo plazo</div>
+</div>
+<div class="pane active" id="p0">
+<div class="rec"><div class="rec-n" style="background:#10102a;color:#6088f0">1</div><div><div class="rec-h">Consulta con ortopedista</div><div class="rec-t">Medición precisa del ángulo de Cobb con instrumentos calibrados.</div></div></div>
+<div class="rec"><div class="rec-n" style="background:#2a2a10;color:#f0c050">2</div><div><div class="rec-h">Radiografía con medición de Cobb</div><div class="rec-t">El especialista trazará líneas en las vértebras terminales. Radiografía de bipedestación recomendada.</div></div></div>
+<div class="rec"><div class="rec-n" style="background:#102a10;color:#50f060">3</div><div><div class="rec-h">Evaluar madurez ósea</div><div class="rec-t">El signo de Risser determina cuánto crecimiento queda y el riesgo de progresión.</div></div></div>
+</div>
+<div class="pane" id="p1">
+<div class="rec"><div class="rec-n" style="background:#10102a;color:#6088f0">A</div><div><div class="rec-h">Fisioterapia Schroth</div><div class="rec-t">Ejercicios tridimensionales de elongación, desrotación y estabilización. Buscar fisioterapeuta certificado.</div></div></div>
+<div class="rec"><div class="rec-n" style="background:#2a2a10;color:#f0c050">B</div><div><div class="rec-h">Corsé ortopédico (si 25-40° y en crecimiento)</div><div class="rec-t">Corsé tipo Boston o Chêneau, 18-23 hrs/día. Uso con Risser 0-2.</div></div></div>
+<div class="rec"><div class="rec-n" style="background:#2a1010;color:#f06050">C</div><div><div class="rec-h">Cirugía (si >40-50°)</div><div class="rec-t">Fusión espinal con instrumentación. Solo para casos severos o progresivos.</div></div></div>
+</div>
+<div class="pane" id="p2">
+<div class="rec"><div class="rec-n" style="background:#102a10;color:#50f060">1</div><div><div class="rec-h">Ejercicio regular</div><div class="rec-t">Natación, yoga, pilates, caminata. Evitar cargas asimétricas.</div></div></div>
+<div class="rec"><div class="rec-n" style="background:#10102a;color:#6088f0">2</div><div><div class="rec-h">Ergonomía</div><div class="rec-t">Silla ergonómica, monitor a nivel de ojos, pausas cada 45-60 min.</div></div></div>
+<div class="rec"><div class="rec-n" style="background:#2a2a10;color:#f0c050">3</div><div><div class="rec-h">Monitoreo periódico</div><div class="rec-t">Radiografía de control anual o semestral según indicación del especialista.</div></div></div>
+</div></div>
+<div class="card">
+<div class="st">Observaciones de la radiografía</div>
+<div class="info-row"><span class="ik">Tipo de estudio</span><span class="iv">Rx AP columna completa</span></div>
+<div class="info-row"><span class="ik">Región afectada</span><span class="iv">Toracolumbar</span></div>
+<div class="info-row"><span class="ik">Tipo de curva</span><span class="iv">Curva en "S" o "C" suave</span></div>
+<div class="info-row"><span class="ik">Rotación vertebral</span><span class="iv">Posible (evaluar clínicamente)</span></div>
+<div class="info-row"><span class="ik">Cuerpos vertebrales</span><span class="iv">Sin alteraciones óseas visibles</span></div>
+<div class="info-row"><span class="ik">Espacios discales</span><span class="iv">Aparentemente conservados</span></div>
+</div>
+<script>
+function updateC(v){v=+v;document.getElementById('sa').textContent=v+'°';document.getElementById('sm').style.left=(v/80*100)+'%';
+let c,t,f;if(v<10){c='Normal / asimetría postural';t='Ninguno específico';f='No requerido'}
+else if(v<25){c='Escoliosis leve';t='Observación + fisioterapia';f='Cada 6-12 meses'}
+else if(v<40){c='Escoliosis moderada';t='Corsé + fisioterapia Schroth';f='Cada 4-6 meses'}
+else if(v<50){c='Escoliosis severa';t='Evaluación quirúrgica';f='Cada 3 meses'}
+else{c='Escoliosis muy severa';t='Cirugía probable';f='Seguimiento continuo'}
+document.getElementById('sc').textContent=c;document.getElementById('st2').textContent=t;document.getElementById('sf').textContent=f}
+function showP(i){document.querySelectorAll('.tab').forEach((t,j)=>t.classList.toggle('active',j===i));
+document.querySelectorAll('.pane').forEach((p,j)=>p.classList.toggle('active',j===i))}
+</script></body></html>

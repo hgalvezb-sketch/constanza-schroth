@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Proyecto Escoliosis — Panel Principal</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#0f0f1a;color:#c8d0e0;min-height:100vh;padding:0 0 40px}
+header{background:linear-gradient(135deg,#1b1b30,#252545);padding:24px 32px;border-bottom:1px solid #333355;text-align:center}
+header h1{font-size:22px;font-weight:700;color:#e0e0f0;margin-bottom:4px}
+header p{font-size:13px;color:#7788aa}
+.warn{max-width:900px;margin:20px auto;padding:12px 20px;background:#2a1a10;border:1px solid #5a3a20;border-radius:10px;font-size:12px;color:#f0a050;text-align:center}
+.grid{max-width:900px;margin:24px auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;padding:0 16px}
+.card{background:#1b1b30;border:1px solid #2a2a50;border-radius:12px;padding:20px;transition:all 0.3s;cursor:pointer;text-decoration:none;display:block}
+.card:hover{border-color:#7c8cf7;transform:translateY(-2px);box-shadow:0 8px 24px rgba(124,140,247,0.1)}
+.card-num{display:inline-block;width:32px;height:32px;border-radius:50%;background:#252550;color:#7c8cf7;text-align:center;line-height:32px;font-size:14px;font-weight:700;margin-bottom:12px}
+.card-title{font-size:15px;font-weight:600;color:#e0e0f0;margin-bottom:6px}
+.card-desc{font-size:12px;color:#7788aa;line-height:1.5}
+.card-tags{margin-top:10px;display:flex;gap:6px;flex-wrap:wrap}
+.tag{padding:2px 8px;border-radius:6px;font-size:10px;font-weight:600}
+.t-html{background:#1a3a2a;color:#66ddaa}
+.t-3d{background:#2a1a3a;color:#bb88ff}
+.t-data{background:#1a2a3a;color:#66aadd}
+.t-doc{background:#3a2a1a;color:#ddaa66}
+.section{max-width:900px;margin:32px auto;padding:0 16px}
+.section h2{font-size:16px;font-weight:600;color:#7c8cf7;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid #2a2a50}
+.cmd{background:#1a1a2a;border:1px solid #2a2a50;border-radius:8px;padding:14px 18px;font-family:'Courier New',monospace;font-size:12px;color:#88cc88;margin:8px 0;overflow-x:auto;white-space:pre}
+.info{font-size:13px;color:#8899bb;line-height:1.6;margin:8px 0}
+</style>
+</head>
+<body>
+<header>
+<h1>Análisis de Escoliosis + Simulador Schroth 3D</h1>
+<p>Proyecto educativo integral — 8 componentes interactivos + documentación clínica</p>
+</header>
+
+<div class="warn">⚠️ Este proyecto es EDUCATIVO. No sustituye diagnóstico ni tratamiento médico profesional. Consultar siempre con un especialista.</div>
+
+<div class="grid">
+<a class="card" href="01-spine-analysis.html">
+<div class="card-num">1</div>
+<div class="card-title">Análisis Inicial de Radiografía</div>
+<div class="card-desc">Evaluación visual de la radiografía AP con estimación de ángulo de Cobb, escala de severidad interactiva, y recomendaciones por fase.</div>
+<div class="card-tags"><span class="tag t-html">HTML</span><span class="tag t-data">Interactivo</span></div>
+</a>
+
+<a class="card" href="02-multiview-analysis.html">
+<div class="card-num">2</div>
+<div class="card-title">Análisis Multi-Proyección</div>
+<div class="card-desc">Hallazgos detallados de 6 proyecciones radiográficas: AP completa, AP lumbar, lateral completa, y lateral lumbosacra focalizada.</div>
+<div class="card-tags"><span class="tag t-html">HTML</span><span class="tag t-data">Tabs</span></div>
+</a>
+
+<a class="card" href="03-statistics-dashboard.html">
+<div class="card-num">3</div>
+<div class="card-title">Dashboard Epidemiológico</div>
+<div class="card-desc">Estadísticas de prevalencia global de escoliosis y espondilolistesis. Barras de prevalencia, pirámide de severidad, factores de riesgo.</div>
+<div class="card-tags"><span class="tag t-html">HTML</span><span class="tag t-data">Charts</span></div>
+</a>
+
+<a class="card" href="04-pregnancy-posture.html">
+<div class="card-num">4</div>
+<div class="card-title">Embarazo + Postura + Zurda</div>
+<div class="card-desc">Análisis de embarazo con escoliosis, correlación pie plano, postura de escritura zurda. Con checklist integral para consulta.</div>
+<div class="card-tags"><span class="tag t-html">HTML</span><span class="tag t-data">Tabs</span></div>
+</a>
+
+<a class="card" href="05-age-risk-treatment.html">
+<div class="card-num">5</div>
+<div class="card-title">Riesgo por Edad + Tratamiento</div>
+<div class="card-desc">Matriz de riesgo Risser×Cobb, ventana de corsé, guías SOSORT 2024, timeline de acciones, aspectos psicológicos.</div>
+<div class="card-tags"><span class="tag t-html">HTML</span><span class="tag t-data">Matrix</span></div>
+</a>
+
+<a class="card" href="06-schroth-guide.html">
+<div class="card-num">6</div>
+<div class="card-title">Guía Ejercicios Schroth</div>
+<div class="card-desc">8 ejercicios Schroth detallados con instrucciones paso a paso, respiración RAB, rutina diaria sugerida, y recursos.</div>
+<div class="card-tags"><span class="tag t-html">HTML</span><span class="tag t-data">8 ejercicios</span></div>
+</a>
+
+<a class="card" href="07-schroth-3d-simulator.html">
+<div class="card-num">7</div>
+<div class="card-title">Simulador 3D — Básico</div>
+<div class="card-desc">Primer simulador Three.js con maniquí articulado básico. 8 ejercicios animados con controles de velocidad y pausa.</div>
+<div class="card-tags"><span class="tag t-3d">Three.js</span><span class="tag t-data">3D</span></div>
+</a>
+
+<a class="card" href="08-schroth-3d-clinical.html">
+<div class="card-num">8</div>
+<div class="card-title">Simulador 3D — Clínico ⭐</div>
+<div class="card-desc">Simulador mejorado con maniquí anatómico detallado, entorno de casa con espejo, pelota suiza, tapete, props y controles avanzados.</div>
+<div class="card-tags"><span class="tag t-3d">Three.js</span><span class="tag t-data">3D</span><span class="tag t-html">Entorno</span></div>
+</a>
+</div>
+
+<div class="section">
+<h2>📄 Documentación</h2>
+<div class="info">La documentación completa está en la carpeta <code>docs/</code>:</div>
+<div class="grid" style="padding:0">
+<a class="card" href="../docs/hallazgos-clinicos.md" style="cursor:default">
+<div class="card-title">📋 Hallazgos Clínicos</div>
+<div class="card-desc">Resumen de hallazgos radiográficos por proyección</div>
+<div class="card-tags"><span class="tag t-doc">Markdown</span></div>
+</a>
+<a class="card" href="../docs/estadisticas.md" style="cursor:default">
+<div class="card-title">📊 Estadísticas</div>
+<div class="card-desc">Datos epidemiológicos compilados de metaanálisis</div>
+<div class="card-tags"><span class="tag t-doc">Markdown</span></div>
+</a>
+<a class="card" href="../docs/plan-tratamiento.md" style="cursor:default">
+<div class="card-title">🎯 Plan de Tratamiento</div>
+<div class="card-desc">Timeline de acciones, medicación, checklist, especialistas</div>
+<div class="card-tags"><span class="tag t-doc">Markdown</span></div>
+</a>
+<a class="card" href="../docs/referencias.md" style="cursor:default">
+<div class="card-title">📚 Referencias</div>
+<div class="card-desc">37 fuentes científicas citadas con DOI</div>
+<div class="card-tags"><span class="tag t-doc">Markdown</span></div>
+</a>
+</div>
+</div>
+
+<div class="section">
+<h2>🚀 Cómo Ejecutar</h2>
+<div class="cmd">cd scoliosis-project
+npx serve src/          # Node.js
+# o
+python3 -m http.server 8080 --directory src/   # Python</div>
+<div class="info">Luego abre <code>http://localhost:8080</code> (o <code>:3000</code> con serve)</div>
+</div>
+
+<div class="section">
+<h2>🔧 Continuar en Claude Code</h2>
+<div class="cmd">cd scoliosis-project
+CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=2 claude --dangerously-skip-permissions
+# → "Lee CLAUDE.md y README.md, luego [tu tarea]"</div>
+</div>
+
+<div class="section">
+<h2>🌐 Deploy a Producción</h2>
+<div class="cmd"># Netlify (más simple)
+netlify deploy --dir=src --prod
+
+# GitHub Pages
+git init && git add . && git commit -m "Scoliosis project"
+git remote add origin https://github.com/USER/scoliosis-project.git
+git push -u origin main
+# Settings > Pages > Source: main / src</div>
+</div>
+</body>
+</html>
