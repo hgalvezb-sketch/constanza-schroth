@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Debug Michelle Bones</title>
+<style>
+body {
+  font-family: monospace;
+  background: #1a1a1a;
+  color: #00ff00;
+  padding: 20px;
+}
+#output {
+  white-space: pre-wrap;
+  font-size: 12px;
+}
+</style>
+</head>
+<body>
+<h1>Inspeccionando Michelle.glb...</h1>
+<div id="output"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+
+<script>
+const output = document.getElementById('output');
+
+function log(text) {
+  output.innerHTML += text + '\n';
+  console.log(text);
+}
+
+const loader = new THREE.GLTFLoader();
+
+loader.load(
+  '../models/Michelle.glb',
+  (gltf) => {
+    log('✅ Modelo cargado exitosamente\n');
+
+    const model = gltf.scene;
+
+    log('=== ESTRUCTURA DEL MODELO ===\n');
+
+    model.traverse((child) => {
+      if (child.isSkinnedMesh) {
+        log('🦴 SkinnedMesh encontrado: ' + child.name);
+
+        if (child.skeleton) {
+          log('\n📋 LISTA DE BONES (' + child.skeleton.bones.length + ' total):\n');
+
+          child.skeleton.bones.forEach((bone, index) => {
+            const indent = '  '.repeat(getDepth(bone));
+            log(`${indent}[${index}] ${bone.name}`);
+          });
+
+          log('\n=== BONES ÚTILES PARA EJERCICIOS ===\n');
+
+          const usefulBones = {};
+          child.skeleton.bones.forEach(bone => {
+            const name = bone.name.toLowerCase();
+
+            // Spine
+            if (name.includes('spine')) {
+              usefulBones['Spine: ' + bone.name] = bone;
+            }
+            // Arms
+            if (name.includes('arm') || name.includes('shoulder') || name.includes('hand')) {
+              usefulBones['Arm: ' + bone.name] = bone;
+            }
+            // Legs
+            if (name.includes('leg') || name.includes('thigh') || name.includes('foot')) {
+              usefulBones['Leg: ' + bone.name] = bone;
+            }
+            // Head/Neck
+            if (name.includes('head') || name.includes('neck')) {
+              usefulBones['Head: ' + bone.name] = bone;
+            }
+            // Hips
+            if (name.includes('hip') || name.includes('pelvis')) {
+              usefulBones['Hip: ' + bone.name] = bone;
+            }
+          });
+
+          Object.keys(usefulBones).forEach(key => {
+            log('  ✓ ' + key);
+          });
+
+          log('\n=== EJEMPLO DE CÓDIGO ===\n');
+          log('// Mapeo de bones:');
+          log('const bones = {};');
+
+          child.skeleton.bones.forEach(bone => {
+            const name = bone.name;
+            const varName = name.replace(/[^a-zA-Z0-9]/g, '_');
+            log(`bones.${varName} = skeleton.bones.find(b => b.name === "${name}");`);
+          });
+        }
+      }
+
+      if (child.isMesh && !child.isSkinnedMesh) {
+        log('📦 Mesh regular: ' + child.name);
+      }
+    });
+
+    // Check animations
+    if (gltf.animations && gltf.animations.length > 0) {
+      log('\n🎬 ANIMACIONES INCLUIDAS: ' + gltf.animations.length);
+      gltf.animations.forEach((anim, i) => {
+        log(`  [${i}] ${anim.name} - ${anim.duration.toFixed(2)}s`);
+      });
+    } else {
+      log('\n⚠️ No hay animaciones pre-hechas en el modelo');
+    }
+  },
+  (progress) => {
+    const percent = (progress.loaded / progress.total * 100).toFixed(0);
+    log(`Cargando... ${percent}%`);
+  },
+  (error) => {
+    log('❌ ERROR: ' + error);
+  }
+);
+
+function getDepth(bone) {
+  let depth = 0;
+  let current = bone.parent;
+  while (current && current.isBone) {
+    depth++;
+    current = current.parent;
+  }
+  return depth;
+}
+</script>
+</body>
+</html>
