@@ -1,0 +1,65 @@
+========================================
+  ✅ CODIGO SUBIDO A GITHUB
+========================================
+
+Tu repositorio:
+https://github.com/hgalvezb-sketch/constanza-schroth
+
+AHORA ACTIVA GITHUB PAGES:
+
+========================================
+  PASO 3: ACTIVAR GITHUB PAGES
+========================================
+
+1. Acabo de abrir tu repo en el navegador
+   (O ve a: https://github.com/hgalvezb-sketch/constanza-schroth)
+
+2. Click en "Settings" (arriba a la derecha)
+
+3. En el menu izquierdo, busca y click en "Pages"
+
+4. En "Source" (Build and deployment):
+   Branch: [main ▼]  /  [(root) ▼]
+   Click [Save]
+
+5. ESPERA 1-2 MINUTOS
+
+6. Refresca la pagina
+
+7. Aparecera un mensaje verde:
+   "Your site is live at https://hgalvezb-sketch.github.io/constanza-schroth/"
+
+========================================
+  TU SIMULADOR ESTARA EN:
+========================================
+
+URL Principal (v3.0 - Michelle.glb):
+https://hgalvezb-sketch.github.io/constanza-schroth/
+
+Redirige automaticamente a:
+https://hgalvezb-sketch.github.io/constanza-schroth/src/constanza-schroth.html
+
+Version alternativa v2.0 (rapida):
+https://hgalvezb-sketch.github.io/constanza-schroth/src/08-schroth-3d-clinical.html
+
+========================================
+  VENTAJAS GITHUB PAGES:
+========================================
+
+✅ v3.0 con Michelle.glb FUNCIONARA
+✅ Primera carga: 5-8 segundos
+✅ Segunda carga: INSTANTANEO (cache)
+✅ Acceso desde movil/tablet
+✅ URL para compartir
+✅ HTTPS automatico (seguro)
+
+========================================
+
+CUANDO ESTE ACTIVO:
+
+- Abre desde cualquier dispositivo
+- Compartelo con tu fisioterapeuta
+- Practica los 8 ejercicios diarios
+- Tu progreso se guarda en cada dispositivo
+
+========================================

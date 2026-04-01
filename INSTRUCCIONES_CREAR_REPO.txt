@@ -1,0 +1,40 @@
+========================================
+  PASO 1: CREAR REPOSITORIO EN GITHUB
+========================================
+
+Acabo de abrir la página en tu navegador:
+https://github.com/new
+
+COMPLETA ASI:
+
+1. Repository name: constanza-schroth
+
+2. Description (opcional):
+   Simulador 3D de ejercicios Schroth para escoliosis
+
+3. Visibility:
+   [X] Private  (recomendado - solo tú lo ves)
+   [ ] Public
+
+4. NO marques:
+   [ ] Add a README file
+   [ ] Add .gitignore
+   [ ] Choose a license
+
+5. Click: [Create repository]
+
+========================================
+
+UNA VEZ CREADO:
+
+Avísame y ejecutaré el push automáticamente.
+
+O ejecuta tú mismo:
+
+cd C:\Users\Administrador\constanza-scoliosis
+git push -u origin main
+
+========================================
+
+REPO CONFIGURADO:
+https://github.com/hgalvezb/constanza-schroth.git
