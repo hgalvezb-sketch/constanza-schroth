@@ -479,7 +479,7 @@ const EXERCISES = [
 
 // State
 let scene, camera, renderer, controls, clock;
-let model, skeleton, bones = {};
+let model;
 let currentExercise = 0;
 let isPaused = false;
 let phaseTimer = 0;
@@ -664,33 +664,6 @@ async function loadModel() {
           }
         });
 
-        // Get skeleton
-        model.traverse((child) => {
-          if (child.isSkinnedMesh && child.skeleton) {
-            skeleton = child.skeleton;
-
-            // Map bones by name
-            skeleton.bones.forEach(bone => {
-              const name = bone.name.toLowerCase();
-              if (name.includes('spine') && name.includes('1')) bones.spine1 = bone;
-              if (name.includes('spine') && name.includes('2')) bones.spine2 = bone;
-              if (name.includes('neck')) bones.neck = bone;
-              if (name.includes('head')) bones.head = bone;
-              if (name.includes('left') && name.includes('shoulder')) bones.leftShoulder = bone;
-              if (name.includes('right') && name.includes('shoulder')) bones.rightShoulder = bone;
-              if (name.includes('left') && name.includes('arm')) bones.leftArm = bone;
-              if (name.includes('right') && name.includes('arm')) bones.rightArm = bone;
-              if (name.includes('left') && name.includes('forearm')) bones.leftForeArm = bone;
-              if (name.includes('right') && name.includes('forearm')) bones.rightForeArm = bone;
-              if (name.includes('left') && name.includes('upleg')) bones.leftUpLeg = bone;
-              if (name.includes('right') && name.includes('upleg')) bones.rightUpLeg = bone;
-              if (name.includes('left') && name.includes('leg')) bones.leftLeg = bone;
-              if (name.includes('right') && name.includes('leg')) bones.rightLeg = bone;
-              if (name.includes('hips')) bones.hips = bone;
-            });
-          }
-        });
-
         scene.add(model);
         loadingText.textContent = '¡Listo! 💜';
 
@@ -710,98 +683,20 @@ async function loadModel() {
   });
 }
 
-// Animations por ejercicio
+// Animations por ejercicio - DESHABILITADAS (causan deformaciones)
 function animateExercise(exerciseName, time) {
-  if (!model || !bones.spine1) return;
+  if (!model) return;
 
-  const t = time;
-  const breathCycle = Math.sin(t * 2) * 0.5 + 0.5; // 0 to 1
+  // Solo aplicar breathing suave en el modelo completo
+  const breathCycle = Math.sin(time * 1.5) * 0.5 + 0.5; // 0 to 1
+  const breathScale = 1 + breathCycle * 0.01; // Muy sutil
 
-  // Reset all bones to neutral
-  Object.values(bones).forEach(bone => {
-    if (bone) {
-      bone.rotation.x = 0;
-      bone.rotation.y = 0;
-      bone.rotation.z = 0;
-    }
-  });
+  model.scale.set(breathScale, 1, breathScale);
 
-  switch(exerciseName) {
-    case 'stand_elongate':
-      // Elongación - estirar columna
-      if (bones.spine1) bones.spine1.rotation.x = -0.05;
-      if (bones.spine2) bones.spine2.rotation.x = -0.05;
-      if (bones.neck) bones.neck.rotation.x = -0.1;
-      if (bones.hips) bones.hips.position.y = Math.sin(t * 1.5) * 0.02;
-      break;
-
-    case 'wall_cylinder':
-      // Brazo izq arriba, der a 90°
-      if (bones.leftShoulder) bones.leftShoulder.rotation.z = -Math.PI * 0.7;
-      if (bones.leftArm) bones.leftArm.rotation.x = -0.3;
-      if (bones.rightShoulder) bones.rightShoulder.rotation.z = Math.PI * 0.4;
-      if (bones.rightArm) bones.rightArm.rotation.y = -Math.PI * 0.4;
-      if (bones.spine2) bones.spine2.rotation.z = Math.sin(t * 2) * 0.1;
-      break;
-
-    case 'prone_frog':
-      // Boca abajo, rodilla flexionada
-      model.rotation.x = Math.PI * 0.5; // Girar boca abajo
-      if (bones.rightUpLeg) bones.rightUpLeg.rotation.z = Math.PI * 0.4;
-      if (bones.rightLeg) bones.rightLeg.rotation.z = -Math.PI * 0.6;
-      break;
-
-    case 'sit_correct':
-      // Sentada con corrección
-      if (bones.hips) bones.hips.position.y = -0.3; // Sentada
-      if (bones.spine1) bones.spine1.rotation.z = -0.15; // Desplazar izq
-      if (bones.spine2) bones.spine2.rotation.z = -0.15;
-      if (bones.spine2) bones.spine2.rotation.x = -0.1; // Elongar
-      break;
-
-    case 'wall_shift':
-      // Side shift - brazo izq arriba
-      if (bones.leftShoulder) bones.leftShoulder.rotation.z = -Math.PI * 0.8;
-      if (bones.leftArm) bones.leftArm.rotation.x = -0.2;
-      if (bones.spine1) bones.spine1.rotation.z = Math.sin(t * 2) * 0.15;
-      if (bones.spine2) bones.spine2.rotation.z = Math.sin(t * 2) * 0.15;
-      break;
-
-    case 'side_breathing':
-      // De lado, mano en costillas
-      model.rotation.z = -Math.PI * 0.5; // De lado
-      if (bones.leftArm) bones.leftArm.rotation.y = -Math.PI * 0.3;
-      if (bones.leftForeArm) bones.leftForeArm.rotation.y = Math.PI * 0.5;
-      // Breathing expansion
-      if (bones.spine1) bones.spine1.scale.set(1, 1 + breathCycle * 0.08, 1);
-      break;
-
-    case 'door_stretch':
-      // Brazos extendidos adelante
-      if (bones.leftShoulder) bones.leftShoulder.rotation.z = Math.PI * 0.3;
-      if (bones.rightShoulder) bones.rightShoulder.rotation.z = Math.PI * 0.3;
-      if (bones.leftArm) bones.leftArm.rotation.y = Math.PI * 0.2;
-      if (bones.rightArm) bones.rightArm.rotation.y = -Math.PI * 0.2;
-      if (bones.spine1) bones.spine1.rotation.x = 0.2; // Inclinado adelante
-      if (bones.spine2) bones.spine2.rotation.x = 0.1;
-      break;
-
-    case 'swiss_ball':
-      // Sentada en pelota, brazo izq arriba
-      if (bones.hips) {
-        bones.hips.position.y = -0.3 + Math.sin(t * 3) * 0.05; // Balanceo
-        bones.hips.rotation.z = Math.sin(t * 2) * 0.08;
-      }
-      if (bones.leftShoulder) bones.leftShoulder.rotation.z = -Math.PI * 0.7;
-      if (bones.leftArm) bones.leftArm.rotation.x = -0.2;
-      break;
-  }
-
-  // Breathing animation en columna
-  if (bones.spine1 && exerciseName !== 'side_breathing') {
-    const breathScale = 1 + breathCycle * 0.03;
-    bones.spine1.scale.set(breathScale, 1, breathScale);
-  }
+  // Resetear rotaciones del modelo
+  model.rotation.x = 0;
+  model.rotation.y = 0;
+  model.rotation.z = 0;
 }
 
 // Progress
@@ -903,13 +798,6 @@ function selectExercise(index) {
   });
 
   updateProgressUI();
-
-  // Reset model rotation
-  if (model) {
-    model.rotation.x = 0;
-    model.rotation.y = 0;
-    model.rotation.z = 0;
-  }
 }
 
 function previousExercise() {
