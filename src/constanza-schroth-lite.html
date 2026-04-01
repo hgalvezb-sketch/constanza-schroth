@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Constanza · Ejercicios Schroth (Lite)</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  background: #0f0a1e;
+  color: #e0e0e0;
+  overflow: hidden;
+}
+#app { display: flex; flex-direction: column; height: 100vh; }
+
+/* Header */
+header {
+  background: linear-gradient(135deg, #1a0f2e, #2d1b4e);
+  padding: 12px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #3d2b5e;
+  flex-shrink: 0;
+}
+.header-left { display: flex; align-items: center; gap: 16px; }
+.header-left h1 {
+  font-size: 18px;
+  font-weight: 700;
+  background: linear-gradient(135deg, #7c3aed, #c084fc);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.progress-dots { display: flex; gap: 6px; }
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #2d1b4e;
+  transition: all 0.3s;
+}
+.dot.active { background: #7c3aed; box-shadow: 0 0 8px #7c3aed; }
+.dot.completed { background: #10b981; box-shadow: 0 0 8px #10b981; }
+.header-stats { display: flex; gap: 12px; }
+.stat {
+  font-size: 12px;
+  padding: 4px 12px;
+  background: #1a0f2e;
+  border-radius: 16px;
+  border: 1px solid #3d2b5e;
+}
+.stat.completed-stat { color: #10b981; border-color: #10b981; }
+.stat.streak-stat { color: #c084fc; border-color: #7c3aed; }
+
+/* Canvas */
+#canvas-container { flex: 1; position: relative; overflow: hidden; }
+canvas { display: block; width: 100%; height: 100%; }
+
+/* HUD */
+#hud {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  background: rgba(15, 10, 30, 0.85);
+  backdrop-filter: blur(12px);
+  padding: 16px 20px;
+  border-radius: 16px;
+  border: 1px solid rgba(124, 58, 237, 0.3);
+  max-width: 320px;
+  pointer-events: none;
+}
+.hud-exercise { font-size: 20px; font-weight: 700; color: #c084fc; margin-bottom: 8px; }
+.hud-phase { font-size: 14px; color: #a78bfa; margin-bottom: 12px; }
+.hud-breathing {
+  font-size: 16px;
+  font-weight: 600;
+  padding: 8px 12px;
+  border-radius: 8px;
+  margin-bottom: 12px;
+}
+.hud-breathing.inhale { background: rgba(16, 185, 129, 0.2); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); }
+.hud-breathing.exhale { background: rgba(251, 146, 60, 0.2); color: #fb923c; border: 1px solid rgba(251, 146, 60, 0.3); }
+.hud-timer { font-size: 32px; font-weight: 700; font-variant-numeric: tabular-nums; color: #7c3aed; text-align: center; }
+
+/* Controls */
+#controls {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.ctrl-btn {
+  padding: 10px 16px;
+  background: rgba(15, 10, 30, 0.85);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(124, 58, 237, 0.3);
+  border-radius: 12px;
+  color: #a78bfa;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+  user-select: none;
+  min-width: 140px;
+  text-align: center;
+}
+.ctrl-btn:hover { background: rgba(124, 58, 237, 0.2); border-color: #7c3aed; color: #c084fc; }
+.ctrl-btn.active { background: #7c3aed; color: #fff; border-color: #7c3aed; }
+.ctrl-btn.complete { background: #10b981; color: #fff; border-color: #10b981; }
+
+/* Bottom Panel */
+#bottom-panel {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(15, 10, 30, 0.95);
+  backdrop-filter: blur(16px);
+  border-top: 1px solid rgba(124, 58, 237, 0.3);
+  transition: transform 0.3s ease-out;
+}
+#bottom-panel.collapsed { transform: translateY(calc(100% - 60px)); }
+.panel-handle {
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  cursor: pointer;
+  user-select: none;
+}
+.panel-title { font-size: 16px; font-weight: 600; color: #c084fc; }
+.panel-subtitle { font-size: 13px; color: #7c3aed; margin-left: 12px; }
+.panel-toggle { font-size: 20px; color: #7c3aed; transition: transform 0.3s; }
+#bottom-panel.collapsed .panel-toggle { transform: rotate(180deg); }
+.panel-content {
+  padding: 0 24px 24px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+.exercise-description {
+  font-size: 14px;
+  line-height: 1.6;
+  color: #a78bfa;
+  margin-bottom: 16px;
+}
+.steps-list {
+  list-style: none;
+  counter-reset: step;
+}
+.steps-list li {
+  counter-increment: step;
+  position: relative;
+  padding-left: 32px;
+  margin-bottom: 8px;
+  font-size: 13px;
+  color: #8b7fc8;
+}
+.steps-list li::before {
+  content: counter(step);
+  position: absolute;
+  left: 0;
+  width: 24px;
+  height: 24px;
+  background: #2d1b4e;
+  border: 1px solid #7c3aed;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: #7c3aed;
+}
+
+/* Nav Arrows */
+.nav-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 48px;
+  height: 48px;
+  background: rgba(15, 10, 30, 0.85);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(124, 58, 237, 0.3);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #7c3aed;
+  font-size: 24px;
+  transition: all 0.2s;
+  user-select: none;
+  z-index: 50;
+}
+.nav-arrow:hover {
+  background: rgba(124, 58, 237, 0.3);
+  border-color: #7c3aed;
+  transform: translateY(-50%) scale(1.1);
+}
+.nav-arrow.left { left: 20px; }
+.nav-arrow.right { right: 20px; }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <header>
+    <div class="header-left">
+      <h1>Constanza</h1>
+      <div class="progress-dots" id="progress-dots">
+        <div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div>
+        <div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div>
+      </div>
+    </div>
+    <div class="header-stats">
+      <div class="stat completed-stat" id="progress-stat">0/8 hoy</div>
+      <div class="stat streak-stat" id="streak-stat">0 días</div>
+      <div class="stat">←→ SPACE R F</div>
+    </div>
+  </header>
+
+  <div id="canvas-container">
+    <canvas id="canvas"></canvas>
+
+    <div id="hud">
+      <div class="hud-exercise" id="hud-exercise">Ejercicio</div>
+      <div class="hud-phase" id="hud-phase">Fase 1 de 4</div>
+      <div class="hud-breathing" id="hud-breathing"></div>
+      <div class="hud-timer" id="hud-timer">10:00</div>
+    </div>
+
+    <div id="controls">
+      <button class="ctrl-btn" id="pause-btn" onclick="togglePause()">⏸ Pausar</button>
+      <button class="ctrl-btn" id="complete-btn" onclick="markComplete()">✓ Completar</button>
+      <button class="ctrl-btn" id="reset-btn" onclick="resetCamera()">↻ Reset</button>
+    </div>
+
+    <div class="nav-arrow left" onclick="previousExercise()">‹</div>
+    <div class="nav-arrow right" onclick="nextExercise()">›</div>
+
+    <div id="bottom-panel">
+      <div class="panel-handle" onclick="togglePanel()">
+        <div>
+          <span class="panel-title" id="panel-title">Selecciona un ejercicio</span>
+          <span class="panel-subtitle" id="panel-subtitle"></span>
+        </div>
+        <span class="panel-toggle">▼</span>
+      </div>
+      <div class="panel-content">
+        <p class="exercise-description" id="exercise-description">
+          Usa las flechas ← → para navegar entre ejercicios.
+        </p>
+        <ol class="steps-list" id="steps-list"></ol>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.158.0/examples/js/controls/OrbitControls.js"></script>
+
+<script>
+// Exercise Data
+const EXERCISES = [
+  {name:"Elongación Axial",pos:"De pie",lv:"Básico",desc:"Base del método. De pie frente al espejo, imagina un hilo desde la coronilla. Crece hacia arriba sin ponerte de puntas. Mentón recogido, abdomen activo al 30%.",steps:["Párate frente al espejo con pies separados al ancho de hombros","Imagina un hilo tirando desde la coronilla hacia arriba","Crece manteniendo talones en el suelo, mentón recogido","Activa abdomen al 30%, mantén 10 segundos respirando"],breathing:["","INHALA — crece","Mantén elongación","EXHALA — sostén"]},
+  {name:"Cilindro Muscular",pos:"Contra pared",lv:"Intermedio",desc:"Contra la pared, brazo izquierdo arriba, derecho a 90°. Desplaza costillas hacia lado cóncavo aplicando RAB.",steps:["Espalda contra pared, pies separados","Brazo izquierdo arriba, derecho a 90° adelante","Desplaza costillas hacia lado cóncavo con RAB","Mantén contracción isométrica 5-8 respiraciones"],breathing:["Normal","INHALA — prepara","INHALA → costillas cóncavas","EXHALA sss... fija"]},
+  {name:"Rana en el Estanque",pos:"Boca abajo",lv:"Intermedio",desc:"Boca abajo, flexiona rodilla del lado convexo como rana. Presiona rodilla al suelo activando iliopsoas.",steps:["Acuéstate boca abajo, frente sobre manos cruzadas","Flexiona rodilla derecha en posición de rana","Presiona rodilla hacia el suelo firmemente","Aplica RAB expandiendo costillas cóncavas"],breathing:["Normal","INHALA — flexiona","EXHALA — presiona","INHALA → cóncavo"]},
+  {name:"Autocorrección Sentada ⭐",pos:"En silla",lv:"Básico",desc:"EL MÁS IMPORTANTE para vida diaria. Cojín bajo nalga del lado convexo. Practicar TODO el día.",steps:["Siéntate con cojín bajo nalga derecha (lado convexo)","Elonga la columna como en ejercicio 1","Desplaza tronco hacia la izquierda (lado cóncavo)","Mantén esta postura durante tareas: escuela, tarea, comida"],breathing:["","INHALA — elonga","EXHALA — corrige","Respiración normal"]},
+  {name:"Side-Shift en Pared",pos:"Lateral a pared",lv:"Intermedio",desc:"Lado convexo contra pared con pelota en costillas. Empuja costillas contra pelota.",steps:["De pie con lado derecho contra pared, pelota en costillas","Brazo izquierdo extendido hacia arriba","Empuja costillas contra pelota, tronco se aleja de pared","RAB expandiendo costillas izquierdas"],breathing:["Normal","INHALA — prepara","EXHALA — empuja","INHALA → cóncavo"]},
+  {name:"Respiración RAB 🔑",pos:"De lado",lv:"Clave",desc:"Lo MÁS importante del método. Acostada con lado cóncavo arriba. Inhala dirigiendo aire SOLO ahí.",steps:["Acuéstate de lado izquierdo (cóncavo arriba)","Coloca mano sobre costillas izquierdas","Inhala profundamente dirigiendo aire solo a esa zona","Exhala lentamente con 'sss', mantén expansión"],breathing:["Normal","Prepara","INHALA profundo → costillas","EXHALA sss... lento"]},
+  {name:"Ejercicio de la Puerta",pos:"Marco de puerta",lv:"Básico+",desc:"Ambas manos al marco, paso atrás. La gravedad elonga la columna.",steps:["Sujeta marco de puerta con ambas manos a altura de hombros","Da un paso atrás, deja que gravedad elonga tu columna","Desplaza tronco hacia lado izquierdo (cóncavo)","Mantén con RAB, 5-8 respiraciones"],breathing:["Normal","INHALA — deja elongar","EXHALA — desplaza","INHALA RAB"]},
+  {name:"Pelota Suiza",pos:"Sobre pelota",lv:"Intermedio",desc:"La inestabilidad activa musculatura profunda. Elonga, desplaza pelvis al cóncavo.",steps:["Siéntate sobre pelota suiza, pies firmes en suelo","Elonga columna, activa core","Desplaza pelvis hacia izquierda, brazo izquierdo arriba","Mantén equilibrio con RAB, 5-8 respiraciones"],breathing:["Normal","INHALA — elonga","EXHALA — desplaza","INHALA RAB"]}
+];
+
+// Global State
+let scene, camera, renderer, controls, clock;
+let model;
+let currentExercise = 0;
+let isPaused = false;
+let phaseTimer = 0;
+let currentPhase = 0;
+const PHASE_DURATION = 10;
+
+// Progress Tracking
+let completedToday = new Set();
+let streakDays = 0;
+const STORAGE_KEY = 'constanza_schroth_progress';
+const LAST_DATE_KEY = 'constanza_schroth_last_date';
+const STREAK_KEY = 'constanza_schroth_streak';
+
+// Initialize
+function init() {
+  loadProgress();
+
+  const container = document.getElementById('canvas-container');
+  const canvas = document.getElementById('canvas');
+
+  // Scene
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x1a0f2e);
+  scene.fog = new THREE.Fog(0x1a0f2e, 8, 15);
+
+  // Camera
+  camera = new THREE.PerspectiveCamera(50, container.clientWidth / container.clientHeight, 0.1, 100);
+  camera.position.set(0, 1.6, 3.5);
+
+  // Renderer
+  renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+  renderer.setSize(container.clientWidth, container.clientHeight);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.2;
+
+  // Controls
+  controls = new THREE.OrbitControls(camera, canvas);
+  controls.target.set(0, 1.2, 0);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.05;
+  controls.minDistance = 2;
+  controls.maxDistance = 6;
+  controls.maxPolarAngle = Math.PI / 2 + 0.2;
+  controls.update();
+
+  // Lights
+  scene.add(new THREE.AmbientLight(0xb8a6d9, 0.7));
+
+  const mainLight = new THREE.DirectionalLight(0xfff5e6, 0.9);
+  mainLight.position.set(4, 6, 3);
+  mainLight.castShadow = true;
+  mainLight.shadow.mapSize.set(2048, 2048);
+  scene.add(mainLight);
+
+  const fillLight = new THREE.DirectionalLight(0x9d7dca, 0.4);
+  fillLight.position.set(-3, 3, -2);
+  scene.add(fillLight);
+
+  const accentLight = new THREE.PointLight(0x7c3aed, 0.5, 8);
+  accentLight.position.set(0, 2.5, 0);
+  scene.add(accentLight);
+
+  // Build room and model
+  buildRoom();
+  buildImprovedModel();
+
+  // Setup
+  setupKeyboard();
+  window.addEventListener('resize', onWindowResize);
+  clock = new THREE.Clock();
+
+  selectExercise(0);
+  animate();
+}
+
+// Build room
+function buildRoom() {
+  // Floor
+  const floor = new THREE.Mesh(
+    new THREE.PlaneGeometry(10, 10),
+    new THREE.MeshStandardMaterial({ color: 0x9b7653, roughness: 0.9 })
+  );
+  floor.rotation.x = -Math.PI / 2;
+  floor.receiveShadow = true;
+  scene.add(floor);
+
+  // Walls
+  const wallMat = new THREE.MeshStandardMaterial({ color: 0xe8ddd0, roughness: 0.95 });
+
+  const backWall = new THREE.Mesh(new THREE.PlaneGeometry(10, 4), wallMat);
+  backWall.position.set(0, 2, -4);
+  backWall.receiveShadow = true;
+  scene.add(backWall);
+
+  const sideWall = new THREE.Mesh(new THREE.PlaneGeometry(10, 4), wallMat);
+  sideWall.position.set(-5, 2, 0);
+  sideWall.rotation.y = Math.PI / 2;
+  sideWall.receiveShadow = true;
+  scene.add(sideWall);
+
+  // Mirror
+  const mirrorFrame = new THREE.Mesh(
+    new THREE.BoxGeometry(1.6, 2.4, 0.08),
+    new THREE.MeshStandardMaterial({ color: 0x3a2f2a, roughness: 0.5, metalness: 0.3 })
+  );
+  mirrorFrame.position.set(-4.9, 1.6, 1);
+  mirrorFrame.rotation.y = Math.PI / 2;
+  scene.add(mirrorFrame);
+
+  const mirror = new THREE.Mesh(
+    new THREE.PlaneGeometry(1.4, 2.2),
+    new THREE.MeshStandardMaterial({ color: 0xc8d8e8, roughness: 0.1, metalness: 0.9 })
+  );
+  mirror.position.set(-4.85, 1.6, 1);
+  mirror.rotation.y = Math.PI / 2;
+  scene.add(mirror);
+
+  // Swiss ball
+  const ball = new THREE.Mesh(
+    new THREE.SphereGeometry(0.35, 32, 32),
+    new THREE.MeshStandardMaterial({ color: 0x9b7fc7, roughness: 0.5 })
+  );
+  ball.position.set(2.5, 0.35, 1.5);
+  ball.castShadow = true;
+  scene.add(ball);
+
+  // Yoga mat
+  const mat = new THREE.Mesh(
+    new THREE.BoxGeometry(0.8, 0.02, 2.0),
+    new THREE.MeshStandardMaterial({ color: 0x7c3aed, roughness: 0.85 })
+  );
+  mat.position.set(0, 0.01, 0);
+  mat.castShadow = true;
+  mat.receiveShadow = true;
+  scene.add(mat);
+}
+
+// Build IMPROVED humanoid model
+function buildImprovedModel() {
+  model = new THREE.Group();
+  model.name = 'humanoid';
+
+  // Colors - Constanza theme
+  const skinColor = 0xd8a880;
+  const hairColor = 0x1a0803;
+  const topColor = 0x7c3aed;
+  const pantsColor = 0x1a1a1a;
+
+  // HEAD
+  const headGroup = new THREE.Group();
+  headGroup.position.y = 1.65;
+
+  // Head - smooth sphere
+  const head = new THREE.Mesh(
+    new THREE.SphereGeometry(0.12, 16, 16),
+    new THREE.MeshStandardMaterial({ color: skinColor, roughness: 0.6 })
+  );
+  head.castShadow = true;
+  headGroup.add(head);
+
+  // Hair - ponytail
+  const hair = new THREE.Mesh(
+    new THREE.SphereGeometry(0.13, 16, 16, 0, Math.PI * 2, 0, Math.PI * 0.6),
+    new THREE.MeshStandardMaterial({ color: hairColor, roughness: 0.85 })
+  );
+  hair.position.y = 0.05;
+  headGroup.add(hair);
+
+  const ponytail = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.025, 0.015, 0.2, 8),
+    new THREE.MeshStandardMaterial({ color: hairColor, roughness: 0.85 })
+  );
+  ponytail.position.set(0, -0.02, -0.10);
+  ponytail.rotation.x = 0.5;
+  headGroup.add(ponytail);
+
+  // NECK
+  const neck = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.04, 0.05, 0.12, 12),
+    new THREE.MeshStandardMaterial({ color: skinColor, roughness: 0.6 })
+  );
+  neck.position.y = 1.52;
+  neck.castShadow = true;
+
+  // TORSO - capsule shape
+  const torso = new THREE.Mesh(
+    new THREE.CapsuleGeometry(0.15, 0.35, 12, 16),
+    new THREE.MeshStandardMaterial({ color: topColor, roughness: 0.7 })
+  );
+  torso.position.y = 1.25;
+  torso.castShadow = true;
+
+  // SHOULDERS - visible joints
+  function createShoulder(side) {
+    const x = side === 'left' ? -0.18 : 0.18;
+    const shoulder = new THREE.Mesh(
+      new THREE.SphereGeometry(0.06, 12, 12),
+      new THREE.MeshStandardMaterial({ color: topColor, roughness: 0.7 })
+    );
+    shoulder.position.set(x, 1.42, 0);
+    shoulder.castShadow = true;
+    return shoulder;
+  }
+
+  // ARMS - smooth cylinders
+  function createArm(side) {
+    const group = new THREE.Group();
+    const x = side === 'left' ? -0.18 : 0.18;
+
+    // Upper arm
+    const upperArm = new THREE.Mesh(
+      new THREE.CapsuleGeometry(0.035, 0.22, 8, 12),
+      new THREE.MeshStandardMaterial({ color: skinColor, roughness: 0.6 })
+    );
+    upperArm.position.set(x, 1.28, 0);
+    upperArm.castShadow = true;
+
+    // Elbow joint
+    const elbow = new THREE.Mesh(
+      new THREE.SphereGeometry(0.04, 10, 10),
+      new THREE.MeshStandardMaterial({ color: skinColor, roughness: 0.6 })
+    );
+    elbow.position.set(x, 1.15, 0);
+    elbow.castShadow = true;
+
+    // Forearm
+    const forearm = new THREE.Mesh(
+      new THREE.CapsuleGeometry(0.03, 0.20, 8, 12),
+      new THREE.MeshStandardMaterial({ color: skinColor, roughness: 0.6 })
+    );
+    forearm.position.set(x, 1.00, 0);
+    forearm.castShadow = true;
+
+    // Hand
+    const hand = new THREE.Mesh(
+      new THREE.SphereGeometry(0.035, 10, 10),
+      new THREE.MeshStandardMaterial({ color: skinColor, roughness: 0.6 })
+    );
+    hand.scale.set(1, 1.2, 0.7);
+    hand.position.set(x, 0.88, 0);
+    hand.castShadow = true;
+
+    group.add(upperArm, elbow, forearm, hand);
+    return group;
+  }
+
+  // PELVIS/HIPS
+  const pelvis = new THREE.Mesh(
+    new THREE.BoxGeometry(0.26, 0.12, 0.16),
+    new THREE.MeshStandardMaterial({ color: pantsColor, roughness: 0.6 })
+  );
+  pelvis.position.y = 1.00;
+  pelvis.castShadow = true;
+
+  // LEGS - smooth
+  function createLeg(side) {
+    const group = new THREE.Group();
+    const x = side === 'left' ? -0.09 : 0.09;
+
+    // Hip joint
+    const hip = new THREE.Mesh(
+      new THREE.SphereGeometry(0.055, 12, 12),
+      new THREE.MeshStandardMaterial({ color: pantsColor, roughness: 0.6 })
+    );
+    hip.position.set(x, 0.95, 0);
+    hip.castShadow = true;
+
+    // Thigh
+    const thigh = new THREE.Mesh(
+      new THREE.CapsuleGeometry(0.06, 0.35, 10, 14),
+      new THREE.MeshStandardMaterial({ color: pantsColor, roughness: 0.6 })
+    );
+    thigh.position.set(x, 0.73, 0);
+    thigh.castShadow = true;
+
+    // Knee
+    const knee = new THREE.Mesh(
+      new THREE.SphereGeometry(0.05, 12, 12),
+      new THREE.MeshStandardMaterial({ color: pantsColor, roughness: 0.6 })
+    );
+    knee.position.set(x, 0.52, 0);
+    knee.castShadow = true;
+
+    // Shin
+    const shin = new THREE.Mesh(
+      new THREE.CapsuleGeometry(0.045, 0.35, 10, 14),
+      new THREE.MeshStandardMaterial({ color: skinColor, roughness: 0.6 })
+    );
+    shin.position.set(x, 0.30, 0);
+    shin.castShadow = true;
+
+    // Foot
+    const foot = new THREE.Mesh(
+      new THREE.BoxGeometry(0.08, 0.05, 0.18),
+      new THREE.MeshStandardMaterial({ color: 0xf0f0f0, roughness: 0.5 })
+    );
+    foot.position.set(x, 0.03, 0.04);
+    foot.castShadow = true;
+
+    group.add(hip, thigh, knee, shin, foot);
+    return group;
+  }
+
+  // Assemble model
+  model.add(headGroup);
+  model.add(neck);
+  model.add(torso);
+  model.add(createShoulder('left'));
+  model.add(createShoulder('right'));
+  model.add(createArm('left'));
+  model.add(createArm('right'));
+  model.add(pelvis);
+  model.add(createLeg('left'));
+  model.add(createLeg('right'));
+
+  scene.add(model);
+}
+
+// Progress tracking
+function loadProgress() {
+  try {
+    const today = new Date().toDateString();
+    const lastDate = localStorage.getItem(LAST_DATE_KEY);
+
+    if (lastDate === today) {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) completedToday = new Set(JSON.parse(saved));
+    } else {
+      if (lastDate) {
+        const last = new Date(lastDate);
+        const now = new Date();
+        const diffDays = Math.floor((now - last) / (1000 * 60 * 60 * 24));
+        if (diffDays === 1) {
+          streakDays = (parseInt(localStorage.getItem(STREAK_KEY)) || 0) + 1;
+          localStorage.setItem(STREAK_KEY, streakDays);
+        } else if (diffDays > 1) {
+          streakDays = 0;
+          localStorage.setItem(STREAK_KEY, '0');
+        }
+      }
+      completedToday = new Set();
+      localStorage.setItem(STORAGE_KEY, JSON.stringify([]));
+      localStorage.setItem(LAST_DATE_KEY, today);
+    }
+
+    streakDays = parseInt(localStorage.getItem(STREAK_KEY)) || 0;
+  } catch (e) {
+    console.error('Error loading progress:', e);
+  }
+  updateProgressUI();
+}
+
+function saveProgress() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify([...completedToday]));
+  } catch (e) {
+    console.error('Error saving progress:', e);
+  }
+}
+
+function updateProgressUI() {
+  document.getElementById('progress-stat').textContent = `${completedToday.size}/8 hoy`;
+  document.getElementById('streak-stat').textContent = `${streakDays} día${streakDays !== 1 ? 's' : ''}`;
+
+  const dots = document.querySelectorAll('.dot');
+  dots.forEach((dot, i) => {
+    dot.classList.remove('active', 'completed');
+    if (i === currentExercise) {
+      dot.classList.add('active');
+    } else if (completedToday.has(i)) {
+      dot.classList.add('completed');
+    }
+  });
+}
+
+function markComplete() {
+  completedToday.add(currentExercise);
+  saveProgress();
+  updateProgressUI();
+
+  const btn = document.getElementById('complete-btn');
+  btn.classList.add('complete');
+  btn.textContent = '✓ Completado!';
+
+  setTimeout(() => {
+    btn.classList.remove('complete');
+    btn.textContent = '✓ Completar';
+  }, 2000);
+}
+
+// Exercise selection
+function selectExercise(index) {
+  currentExercise = index;
+  currentPhase = 0;
+  phaseTimer = 0;
+
+  const ex = EXERCISES[index];
+
+  document.getElementById('hud-exercise').textContent = `${index + 1}. ${ex.name}`;
+  document.getElementById('hud-phase').textContent = `Fase 1 de ${ex.steps.length}`;
+  updateBreathing();
+
+  document.getElementById('panel-title').textContent = ex.name;
+  document.getElementById('panel-subtitle').textContent = `${ex.pos} • ${ex.lv}`;
+  document.getElementById('exercise-description').textContent = ex.desc;
+
+  const stepsList = document.getElementById('steps-list');
+  stepsList.innerHTML = '';
+  ex.steps.forEach(step => {
+    const li = document.createElement('li');
+    li.textContent = step;
+    stepsList.appendChild(li);
+  });
+
+  updateProgressUI();
+}
+
+function previousExercise() {
+  selectExercise((currentExercise - 1 + EXERCISES.length) % EXERCISES.length);
+}
+
+function nextExercise() {
+  selectExercise((currentExercise + 1) % EXERCISES.length);
+}
+
+function updateBreathing() {
+  const ex = EXERCISES[currentExercise];
+  const breathingDiv = document.getElementById('hud-breathing');
+  const breathText = ex.breathing[currentPhase] || '';
+
+  breathingDiv.textContent = breathText;
+  breathingDiv.className = 'hud-breathing';
+
+  if (breathText.includes('INHALA')) {
+    breathingDiv.classList.add('inhale');
+  } else if (breathText.includes('EXHALA')) {
+    breathingDiv.classList.add('exhale');
+  }
+}
+
+// Controls
+function togglePause() {
+  isPaused = !isPaused;
+  const btn = document.getElementById('pause-btn');
+  btn.textContent = isPaused ? '▶ Continuar' : '⏸ Pausar';
+  btn.classList.toggle('active', isPaused);
+}
+
+function resetCamera() {
+  controls.reset();
+  camera.position.set(0, 1.6, 3.5);
+  controls.target.set(0, 1.2, 0);
+  controls.update();
+}
+
+function togglePanel() {
+  document.getElementById('bottom-panel').classList.toggle('collapsed');
+}
+
+// Keyboard
+function setupKeyboard() {
+  window.addEventListener('keydown', (e) => {
+    switch(e.key) {
+      case 'ArrowLeft': previousExercise(); break;
+      case 'ArrowRight': nextExercise(); break;
+      case ' ': e.preventDefault(); togglePause(); break;
+      case 'r': case 'R': resetCamera(); break;
+      case 'f': case 'F':
+        if (!document.fullscreenElement) {
+          document.documentElement.requestFullscreen();
+        } else {
+          document.exitFullscreen();
+        }
+        break;
+    }
+  });
+}
+
+// Resize
+function onWindowResize() {
+  const container = document.getElementById('canvas-container');
+  camera.aspect = container.clientWidth / container.clientHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(container.clientWidth, container.clientHeight);
+}
+
+// Animation loop
+function animate() {
+  requestAnimationFrame(animate);
+
+  const delta = clock.getDelta();
+
+  if (!isPaused) {
+    phaseTimer += delta;
+
+    const ex = EXERCISES[currentExercise];
+    const phaseDuration = PHASE_DURATION;
+
+    if (phaseTimer >= phaseDuration) {
+      currentPhase = (currentPhase + 1) % ex.steps.length;
+      phaseTimer = 0;
+
+      document.getElementById('hud-phase').textContent = `Fase ${currentPhase + 1} de ${ex.steps.length}`;
+      updateBreathing();
+    }
+
+    const remaining = Math.max(0, phaseDuration - phaseTimer);
+    const mins = Math.floor(remaining / 60);
+    const secs = Math.floor(remaining % 60);
+    document.getElementById('hud-timer').textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
+
+    // Breathing animation
+    if (model) {
+      const breathScale = 1 + Math.sin(clock.elapsedTime * 2) * 0.015;
+      model.scale.set(breathScale, 1, breathScale);
+    }
+  }
+
+  controls.update();
+  renderer.render(scene, camera);
+}
+
+// Start
+init();
+</script>
+
+</body>
+</html>
